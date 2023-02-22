@@ -38,6 +38,7 @@ Important notes before using: <br>
 1. In the load image mode, the dimensions of the image may be flipped so double check when setting start and end positions.
 2. For both modes, make sure to set equal start and end points in both the MATLAB interface and in settings.config. In MATLAB, the values have to be incremented by 1 to match the C++ code.
 3. Instead, you can try to parse settings.config also in MATLAB.
+4. Set the correct image path in settings.config.
 
 To interface with MATLAB, the code read_serialized_heuristic.m calls main.exe using main.bat, where the components of the .bat file are: <br>
 set path=%path:C:\Program Files\MATLAB\R2022b\bin;=% <br>
