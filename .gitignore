@@ -27,9 +27,10 @@
 *.lib
 
 # Executables
-*.exe
 *.out
 *.app
+
+# Output
 src/output/LightSourceEnum.txt
 src/output/lightSources.txt
 src/output/LocalVisibilityMap.txt
