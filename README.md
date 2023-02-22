@@ -33,6 +33,13 @@ The C++ code has a parser that parses settings from settings.config file, and ca
 In the second mode, the C++ code uses SFML to load an image representing the environment (mazes in this case). The directory of the image is set in the settings.config also as well as start and end point positions.
 In both modes, the solver outputs .txt files which are loaded by MATLAB and plotted as meshes for viewing purposes.
 We provide main.exe which is a built executable of the code. <br>
+Important note: the dimensions of the image may be flipped so double check when setting start and end position for the mode with loading images. <br>
+
+To interface with MATLAB, the code read_serialized_heuristic.m calls main.exe using main.bat, where the components of the .bat file are: <br>
+set path=%path:C:\Program Files\MATLAB\R2022b\bin;=% <br>
+main.exe <br>
+Make sure to change the path for your MATLAB installation directory inside the .bat (and use the proper version). <br>
+The code then reads the results and plots them nicely.
 
 # Instructions to build the C++ code on Windows in Visual Studio Code
 We provide tasks.json, c_cpp_properties.json, and launch.json for building and launching the code in Visual Studio Code. <br>
