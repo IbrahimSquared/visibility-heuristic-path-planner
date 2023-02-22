@@ -34,7 +34,7 @@ In the second mode, the C++ code uses SFML to load an image representing the env
 In both modes, the solver outputs .txt files which are loaded by MATLAB and plotted as meshes for viewing purposes.
 We provide main.exe which is a built executable of the code. <br>
 
-# Instructions to build C++ code on Windows in Visual Studio Code
+# Instructions to build the C++ code on Windows in Visual Studio Code
 We provide tasks.json, c_cpp_properties.json, and launch.json for building and launching the code in Visual Studio Code. <br>
 Make sure to change the compiler path in tasks.json for both debug and release modes: <br>
 "command": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\g++.exe"
