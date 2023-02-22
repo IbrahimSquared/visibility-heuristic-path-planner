@@ -1,4 +1,4 @@
-# visibility-heuristic-path-planner
+# Visibility & Visibility Heuristic Path Planning
 This repository contains an implementation of the algorithms provided in the paper: to-be-added.
 
 # Visibility
