@@ -33,16 +33,7 @@ nx = size(map_visibility,1);
 ny = size(map_visibility,2);
 
 %%
-% filename_visibility_env  = "output/VisibilityMap_env.txt";
-% T_visibility_env = readtable(filename_visibility_env,'Delimiter',' ');
-% map_visibility_env = T_visibility_env.Variables;
-% nx = size(map_visibility_env,1);
-% ny = size(map_visibility_env,2);
-
 clf
-% contour(map_w,0:1:200);
-% map_visibility; map_visibility_env; lightSource_enum;
-% map_local_visibility;
 mesh(imcomplement(map_visibility_env),'FaceLighting','none','FaceColor','red',...
     'AmbientStrength',1,'EdgeLighting','flat',...
     'EdgeColor', 'red', 'FaceAlpha','1');
@@ -50,12 +41,10 @@ hold on
 mesh(map_visibility+0.01,'FaceLighting','phong','FaceColor','interp',...
         'AmbientStrength',0.5, 'EdgeColor', 'interp','FaceAlpha','1.0');
 colormap(gray)
-% colormap("default")
-% imagesc(map_w);
+
 view(0,90)
 axis equal
 axis([1 ny 1 nx])
-% set(gca,'LooseInset',get(gca,'TightInset'));
 hold on
 
 grid off
@@ -79,14 +68,14 @@ for i = 1:size(pivots,1)
     end
 end
 
-
+% Start point and target point
 % sp_o = [1 1];
 % ep_o = [101 101];
 sp_o = [170 316] + 1;
 ep_o = [155 6] + 1;
 pt = ep_o;
 
-
+% Plot the path as lines
 pointz = [pt];
 d_1 = 0;
 while true 
