@@ -16,15 +16,15 @@ Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_1.png) <br>
 
 # MATLAB code
-We provide a commented MATLAB implementation of all the demonstrations provided in the paper.
-  0. The environments can be randomized by uncommeting the loaded seed, but we provide the seeds that we used for reproducibility purposes (rnd_1.mat rnd_2.mat).
-  1. a_quiver_plots.m plots the components a(x,y) and b(x,y) that govern the solution behaviour of the partial differential equation (lines-of-sight vs curves-of-sight are illustrated in the paper).
-  2. b_visibility_shapes.m plots the visibility polygon provided in the paper (environment can be randomized also).
-  3. c_sample_planner_solving_random_environments.m solves a path planning problem using the visibility heuristic path planner solution and plots the results.
-  4. d_sample_planner_solving_maze same as 3- but loads maze images and solves them.
-  5. e_used_for_video_submission.m self-explanatory.
-  6. f_comparison_to_a_star.m used to get the comparison results against astar.
-  7. test_environment_generator.m standalone, tests generating random environments with given settings making sure that start and end positions are not inside obstacles
+We provide a commented MATLAB implementation of all the demonstrations provided in the paper. <br>
+  1. The environments can be randomized by uncommeting the loaded seed, but we provide the seeds that we used for reproducibility purposes (rnd_1.mat rnd_2.mat).
+  2. a_quiver_plots.m plots the components a(x,y) and b(x,y) that govern the solution behaviour of the partial differential equation (lines-of-sight vs curves-of-sight are illustrated in the paper).
+  3. b_visibility_shapes.m plots the visibility polygon provided in the paper (environment can be randomized also).
+  4. c_sample_planner_solving_random_environments.m solves a path planning problem using the visibility heuristic path planner solution and plots the results.
+  5. d_sample_planner_solving_maze same as 3- but loads maze images and solves them.
+  6. e_used_for_video_submission.m self-explanatory.
+  7. f_comparison_to_a_star.m used to get the comparison results against astar.
+  8. test_environment_generator.m standalone, tests generating random environments with given settings making sure that start and end positions are not inside obstacles
 
 # C++ code
 We provide a C++ implementation that is interfaced with MATLAB too. <br>
