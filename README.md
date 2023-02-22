@@ -9,7 +9,7 @@ Two sample visibility polygons produced using b_visibility_shapes.m <br>
 Thresholded visibility polygon <br>
 ![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5_threshold.jpg) <br>
 
-# Planner
+# Visibility Heuristic Path Planner
 Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
 ![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_0.png) <br>
