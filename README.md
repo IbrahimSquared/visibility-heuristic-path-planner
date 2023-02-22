@@ -50,7 +50,7 @@ The code then reads the results and plots them nicely.
 We provide tasks.json, c_cpp_properties.json, and launch.json for building and launching the code in Visual Studio Code. <br>
 Make sure to change the compiler path in tasks.json for both debug and release modes: <br>
 "command": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\g++.exe"
-The tasks.json automatically link the SFML libraries with the argument "-lsfml-graphics". <br>
+The tasks.json automatically links the SFML libraries with the argument "-lsfml-graphics". <br>
 For debug purposes, change "miDebuggerPath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\gdb.exe" path as well in launch.json. <br>
 
 Dependencies: <br>
