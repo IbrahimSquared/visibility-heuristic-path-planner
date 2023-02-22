@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+src/output/LightSourceEnum.txt
+src/output/lightSources.txt
+src/output/LocalVisibilityMap.txt
+src/output/VisibilityMap_env.txt
+src/output/VisibilityMap.txt
