@@ -27,7 +27,7 @@ We provide a commented MATLAB implementation of all the demonstrations provided 
   7. test_environment_generator.m standalone, tests generating random environments with given settings making sure that start and end positions are not inside obstacles
 
 # C++ code
-We also provide a C++ implementation that is interfaced with MATLAB too. <br>
+We provide a C++ implementation that is interfaced with MATLAB too. <br>
 How to use the C++ code: <br>
 The C++ code has a parser that parses settings from settings.config file, and can work in two modes. In the first mode, a random environment with a given grid size is generated containing a specific number of obstacles that have given dimensions (all loaded via settings.config). The start and end points can also be specified as well as some other settings. <br>
 In the second mode, the C++ code uses SFML to load an image representing the environment (mazes in this case). The directory of the image is set in the settings.config also as well as start and end point positions.
@@ -42,5 +42,7 @@ The tasks.json automatically link the SFML libraries with the argument "-lsfml-g
 For debug purposes, change "miDebuggerPath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\gdb.exe" path as well in launch.json. <br>
 
 Dependencies: <br>
-Installed SFML in MSYS2 using:  <br>
+If you are using Visual Studio Code and MSYS2: <br>
+Install SFML in MSYS2 using:  <br>
 pacman -S mingw-w64-x86_64-sfml <br>
+ <br>
