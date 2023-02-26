@@ -8,7 +8,7 @@ using namespace vbs;
 int main() {
   // Parse settings
   ConfigParser parser;
-  parser.parse("settings.config");
+  parser.parse("config/settings.config");
   auto config = parser.getConfig();
 
   // Initialize environment
