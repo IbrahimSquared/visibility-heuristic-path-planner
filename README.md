@@ -32,7 +32,7 @@ How to use the C++ code: <br>
 The C++ code has a parser that parses settings from settings.config file, and can work in two modes. In the first mode, a random environment with a given grid size is generated containing a specific number of obstacles that have given dimensions (all loaded via settings.config). The start and end points can also be specified as well as some other settings. <br>
 In the second mode, the C++ code uses SFML to load an image representing the environment (mazes in this case). The directory of the image is set in the settings.config also as well as start and end point positions.
 In both modes, the solver outputs .txt files which are loaded by MATLAB and plotted as meshes for viewing purposes. The MATLAB interface uses the solution lightSource_enum to also plots lines to visualize the path. lightSource_enum essentially stores the parent of every explored point in the grid, meaning we can retract the solution with it.
-We provide main.exe which is a built executable of the code. <br>
+We provide visibility_heuristic_planner.exe which is a built executable of the code. <br>
 
 Important notes before using: <br>
 1. In the load image mode, the dimensions of the image may be flipped so double check when setting start and end positions.
@@ -40,21 +40,27 @@ Important notes before using: <br>
 3. Instead, you can try to parse settings.config also in MATLAB.
 4. Set the correct image path in settings.config.
 
-To interface with MATLAB, the code read_serialized_heuristic.m calls main.exe using main.bat, where the components of the .bat file are: <br>
-set path=%path:C:\Program Files\MATLAB\R2022b\bin;=% <br>
-main.exe <br>
+To interface with MATLAB, the code read_serialized_heuristic.m calls visibility_heuristic_planner.exe using visibility_heuristic_planner.bat, where the components of the .bat file are: <br>
+(```) set path=%path:C:\Program Files\MATLAB\R2022b\bin\win64;=% (```) <br>
+(```) visibility_heuristic_planner.exe (```) <br>
 Make sure to change the path for your MATLAB installation directory inside the .bat (and use the proper version). <br>
 The code then reads the results and plots them nicely.
 
 # Instructions to build the C++ code on Windows in Visual Studio Code
 We provide tasks.json, c_cpp_properties.json, and launch.json for building and launching the code in Visual Studio Code. <br>
 Make sure to change the compiler path in tasks.json for both debug and release modes: <br>
-"command": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\g++.exe"
-The tasks.json automatically links the SFML libraries with the argument "-lsfml-graphics". <br>
+(```) "command": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\g++.exe" (```)
+The tasks.json automatically links the SFML libraries with the argument (```) "-lsfml-graphics" (```). <br>
 For debug purposes, change "miDebuggerPath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\gdb.exe" path as well in launch.json. <br>
 
 Dependencies: <br>
 If you are using Visual Studio Code and MSYS2: <br>
 Install SFML in MSYS2 using:  <br>
-pacman -S mingw-w64-x86_64-sfml <br>
- <br>
+(```) pacman -S mingw-w64-x86_64-sfml <br> (```) <br>
+
+# Instructions to build the C++ code on Windows in Visual Studio Code using CMakeLists.txt
+We provide CMakeLists.txt for easy building and compilation too. Install CMake Tools extension on VSCode and configure the kit and the generator. <br>
+We used: <br>
+(```) pacman -S mingw-w64-x86_64-cmake (```)  <br>
+Set the cmakePath accordingly in settings.json: <br>
+(```) "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe", (```)
