@@ -56,7 +56,7 @@ For debug purposes, change "miDebuggerPath": "C:\\Workdir\\Programs\\msys64\\min
 Dependencies: <br>
 If you are using Visual Studio Code and MSYS2: <br>
 Install SFML in MSYS2 using:  <br>
-``` pacman -S mingw-w64-x86_64-sfml <br> ``` <br>
+``` pacman -S mingw-w64-x86_64-sfml ``` <br>
 
 # Instructions to build the C++ code on Windows in Visual Studio Code using CMakeLists.txt
 We provide CMakeLists.txt for easy building and compilation too. Install CMake Tools extension on VSCode and configure the kit and the generator. <br>
