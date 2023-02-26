@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <chrono>
 
@@ -235,8 +236,24 @@ void visibilityBasedSolver::updateVisibility() {
 /******************************************************************************************************/
 /******************************************************************************************************/
 void visibilityBasedSolver::saveResults() {
+  namespace fs = std::filesystem;
+  // Define the path to the output file
+  std::string path = "./output/LightSourceEnum.txt";
+  // Check if the directory exists, and create it if it doesn't
+  fs::path dir = fs::path(path).parent_path();
+  if (!fs::exists(dir)) {
+    if (!fs::create_directories(dir)) {
+      std::cerr << "Failed to create directory " << dir.string() << std::endl;
+      return;
+    }
+  }
+
   if (config_->saveLightSourceEnum) {
-    std::fstream of("./output/LightSourceEnum.txt", std::ios::out | std::ios::trunc);
+    std::fstream of(path, std::ios::out | std::ios::trunc);
+    if (!of.is_open()) {
+      std::cerr << "Failed to open output file " << path << std::endl;
+      return;
+    }
     if (of.is_open()) {
       std::ostream& os = of;
       for (int i = 0; i < nrows_; ++i) { 
@@ -252,7 +269,12 @@ void visibilityBasedSolver::saveResults() {
     }
   }
   if (config_->saveLightSources) {
-    std::fstream of("./output/lightSources.txt", std::ios::out | std::ios::trunc);
+    path = "./output/lightSources.txt";
+    std::fstream of(path, std::ios::out | std::ios::trunc);
+    if (!of.is_open()) {
+      std::cerr << "Failed to open output file " << path << std::endl;
+      return;
+    }
     if (of.is_open()) {
       std::ostream& os = of;
       for (int i = 0; i < nb_of_sources_; ++i) { 
@@ -266,7 +288,12 @@ void visibilityBasedSolver::saveResults() {
     }
   }
   if (config_->saveGlobalVisibility) {
-    std::fstream of("./output/VisibilityMap.txt", std::ios::out | std::ios::trunc);
+    path = "./output/VisibilityMap.txt";
+    std::fstream of(path, std::ios::out | std::ios::trunc);
+    if (!of.is_open()) {
+      std::cerr << "Failed to open output file " << path << std::endl;
+      return;
+    }
     if (of.is_open()) {
       std::ostream& os = of;
       for (size_t i = 0; i < nrows_; ++i) { 
@@ -282,7 +309,12 @@ void visibilityBasedSolver::saveResults() {
     }
   }
   if (config_->saveLocalVisibility) {
-    std::fstream of("./output/LocalVisibilityMap.txt", std::ios::out | std::ios::trunc);
+    path = "./output/LocalVisibilityMap.txt";
+    std::fstream of(path, std::ios::out | std::ios::trunc);
+    if (!of.is_open()) {
+      std::cerr << "Failed to open output file " << path << std::endl;
+      return;
+    }
     if (of.is_open()) {
       std::ostream& os = of;
       for (size_t i = 0; i < nrows_; ++i) { 
@@ -298,7 +330,12 @@ void visibilityBasedSolver::saveResults() {
     }
   }
   if (config_->saveVisibilityMapEnv) {
-    std::fstream of("./output/VisibilityMap_env.txt", std::ios::out | std::ios::trunc);
+    path = "./output/VisibilityMap_env.txt";
+    std::fstream of(path, std::ios::out | std::ios::trunc);
+    if (!of.is_open()) {
+      std::cerr << "Failed to open output file " << path << std::endl;
+      return;
+    }
     if (of.is_open()) {
       std::ostream& os = of;
       for (size_t i = 0; i < nrows_; ++i) { 
