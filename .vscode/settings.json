@@ -74,6 +74,10 @@
     "chrono": "cpp",
     "list": "cpp",
     "map": "cpp",
-    "queue": "cpp"
+    "queue": "cpp",
+    "codecvt": "cpp",
+    "iomanip": "cpp"
   },
+  "cmake.configureOnOpen": true,
+  "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe",
 }
