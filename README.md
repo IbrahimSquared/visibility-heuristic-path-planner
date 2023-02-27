@@ -61,6 +61,7 @@ Install SFML in MSYS2 using:  <br>
 # Instructions to build the C++ code on Windows in Visual Studio Code using CMakeLists.txt
 We provide CMakeLists.txt for easy building and compilation too. Install CMake Tools extension on VSCode and configure the kit and the generator. <br>
 We used: <br>
-``` pacman -S mingw-w64-x86_64-cmake ```  <br>
+``` pacman -S mingw-w64-x86_64-cmake ``` <br>
+Make sure cmake is working using ``` cmake --version ```, a reload may be necessary <br>
 Set the cmakePath accordingly in settings.json: <br>
 ``` "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe", ```
