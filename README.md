@@ -1,5 +1,5 @@
 # Visibility & Visibility Heuristic Path Planning
-This repository contains an implementation of the algorithms provided in the paper: to-be-added.
+This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem and an Accompanying Heuristic Path Planner on Cartesian Grids (IROS2023 pending, will soon attach arxiv paper).
 
 # Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
