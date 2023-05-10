@@ -3,17 +3,17 @@ This repository contains an implementation of the algorithms provided in the pap
 
 # Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5.jpg) <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/many_small_obstacles_3.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/many_small_obstacles_3.jpg) <br>
 
 Thresholded visibility polygon <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5_threshold.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5_threshold.jpg) <br>
 
 # Visibility Heuristic Path Planner
 Sample solutions provided in the paper: <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_0.png) <br>
-![alt text](https://github.com/IbrahimSquared1/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_1.png) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_0.png) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_1.png) <br>
 
 # MATLAB code
 We provide a commented MATLAB implementation of all the demonstrations provided in the paper. <br>
