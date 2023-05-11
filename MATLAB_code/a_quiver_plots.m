@@ -1,6 +1,5 @@
 clc; clear;
 %% Quiver plots
-clf
 nrows = 25; ncols = nrows;
 
 x = meshgrid(-nrows+1:nrows); 
