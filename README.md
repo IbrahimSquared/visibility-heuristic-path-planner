@@ -3,8 +3,8 @@ This repository contains an implementation of the algorithms provided in the pap
 
 
 # Important: Standard for inputting/reading images
-Mode=2 reads an image map, the path of which is specified in imagePath in settings.config, for example maze_1.png in the folder images. <br> 
-Note that initialFrontline in settings.config  is in the form of {p1x,p1y} [ncols-paint_y nrows-paint_x].
+Mode=2 reads an image map, the path of which is specified in imagePath in settings.config, for example lab_image_edited.png (893x646) in the folder images.
+If you open the image in Paint for example, the (1,1) pixel coordinate is the top left corner, and the (893x646) is in the right bottom corner. MATLAB, instead, considers the bottom left corner as (1,1) and top right corner as (893x646). Since we are visualizing the results in MATLAB, the code has been edited to be MATLAB-style compatible. This is relevant to selecting start/end points. The x coordinate (first element of start and end) are the same as in Paint for example. The y coordinate (second element of start and end) should be selected as 646 - paint_y_coordinate for example for lab_image_edited. This standard can of course be changed. Inside the code you'll find places where for example a y coordinate is set as y = nrows_ - 1 - start.second. This is to account to this fact and to the fact that C++ begins indices at 0 instead of 1.
 
 # Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
