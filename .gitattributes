@@ -1,2 +1,4 @@
 *.h linguist-language=C++
 *.cpp linguist-language=C++
+
+MATLAB_code/expfig/* linguist-vendored
