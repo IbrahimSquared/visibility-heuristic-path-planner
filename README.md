@@ -19,9 +19,9 @@ Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_0.png) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_1.png) <br>
-![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/lab_test_result.png) <br>
-![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_5_example.png) <br>
-![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_6_example.png) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/lab_test_result.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_5_example.jpg) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_6_example.jpg) <br>
 
 # MATLAB code
 We provide a commented MATLAB implementation of all the demonstrations provided in the paper. <br>
