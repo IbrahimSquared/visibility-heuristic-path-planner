@@ -10,10 +10,9 @@ using size_t = std::size_t;
 using point = std::pair<int, int>;
 
 struct Config {
-  bool randomEnvironment = true;
-  bool importImage = false;
-  size_t nrows = 100;
+  int mode = 1;
   size_t ncols = 100;
+  size_t nrows = 100;
   size_t nb_of_obstacles = 10;
   size_t minWidth = 10;
   size_t maxWidth = 20;
@@ -25,14 +24,15 @@ struct Config {
   point start;
   point end;
   size_t max_iter = 100;
-  float threshold = 0.5;
+  double visibilityThreshold = 0.5;
   float lightStrength = 1;
   bool timer = true;
+  bool saveResults = true;
   bool saveLocalVisibility = true;
-  bool saveLightSourceEnum = true;
+  bool saveCameFrom = true;
   bool saveLightSources = true;
   bool saveGlobalVisibility = true;
-  bool saveVisibilityMapEnv = true;
+  bool saveVisibilityField = true;
   bool silent = false;
 };
 

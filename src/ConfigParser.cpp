@@ -38,31 +38,25 @@ bool ConfigParser::parse(const std::string& filename) {
     value.erase(value.find_last_not_of(" \t") + 1);
 
     // Parse the value based on the key's data type
-    if (key == "randomEnvironment") {
-      if (value == "0" || value == "false") {
-        config_.randomEnvironment = false;
-      } else if (value == "1" || value == "true") {
-        config_.randomEnvironment = true;
-      } else {
-        std::cerr << "Invalid value for " << key << ": " << value << '\n';
-      }
-    } else if (key == "importImage") {
-      if (value == "0" || value == "false") {
-        config_.importImage = false;
-      } else if (value == "1" || value == "true") {
-        config_.importImage = true;
-      } else {
-        std::cerr << "Invalid value for " << key << ": " << value << '\n';
-      }
-    } else if (key == "nrows") {
+    if (key == "mode") {
       try {
-        config_.nrows = std::stoul(value);
+        config_.mode = std::stoi(value);
+        if (config_.mode != 1 && config_.mode != 2) {
+          std::cerr << "Invalid value for " << key << ": " << value << ", using default value 1\n";
+          config_.mode = 1;
+        }
       } catch (...) {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
     } else if (key == "ncols") {
       try {
         config_.ncols = std::stoul(value);
+      } catch (...) {
+        std::cerr << "Invalid value for " << key << ": " << value << '\n';
+      }
+    } else if (key == "nrows") {
+      try {
+        config_.nrows = std::stoul(value);
       } catch (...) {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
@@ -130,9 +124,9 @@ bool ConfigParser::parse(const std::string& filename) {
       } catch (...) {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
-    } else if (key == "threshold") {
+    } else if (key == "visibilityThreshold") {
       try {
-        config_.threshold  = std::stod(value);
+        config_.visibilityThreshold  = std::stod(value);
       } catch (...) {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
@@ -150,11 +144,19 @@ bool ConfigParser::parse(const std::string& filename) {
       } else {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
-    } else if (key == "saveLightSourceEnum") {
+    } else if (key == "saveResults") {
       if (value == "0" || value == "false") {
-        config_.saveLightSourceEnum = false;
+        config_.saveResults = false;
       } else if (value == "1" || value == "true") {
-        config_.saveLightSourceEnum = true;
+        config_.saveResults = true;
+      } else {
+        std::cerr << "Invalid value for " << key << ": " << value << '\n';
+      }
+    } else if (key == "saveCameFrom") {
+      if (value == "0" || value == "false") {
+        config_.saveCameFrom = false;
+      } else if (value == "1" || value == "true") {
+        config_.saveCameFrom = true;
       } else {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
@@ -174,11 +176,11 @@ bool ConfigParser::parse(const std::string& filename) {
       } else {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
-    } else if (key == "saveVisibilityMapEnv") {
+    } else if (key == "saveVisibilityField") {
       if (value == "0" || value == "false") {
-        config_.saveVisibilityMapEnv = false;
+        config_.saveVisibilityField = false;
       } else if (value == "1" || value == "true") {
-        config_.saveVisibilityMapEnv = true;
+        config_.saveVisibilityField = true;
       } else {
         std::cerr << "Invalid value for " << key << ": " << value << '\n';
       }
@@ -195,7 +197,7 @@ bool ConfigParser::parse(const std::string& filename) {
     }
   }
   if (!config_.silent) {
-    if (config_.randomEnvironment) {
+    if (config_.mode == 1) {
       std::cout << "Random environment mode" << std::endl;
       std::cout << "########################### Environment settings ########################## \n"
         << "nrows: " << config_.nrows << "\n"
@@ -210,7 +212,7 @@ bool ConfigParser::parse(const std::string& filename) {
       } else {
         std::cout << "Fixed seed value: " << config_.seedValue << std::endl;
       }
-    } else if (config_.importImage) {
+    } else if (config_.mode == 2) {
       std::cout << "Import image mode" << "\n"
         << "Image path: " << config_.imagePath << std::endl;
     }
@@ -218,15 +220,15 @@ bool ConfigParser::parse(const std::string& filename) {
         << "Start point: " << config_.start.first << ", " << config_.start.second << "\n"
         << "End point: " << config_.end.first << ", " << config_.end.second << "\n"
         << "Maximum iterations: " << config_.max_iter << "\n"
-        << "Solver visibility threshold: " << config_.threshold << "\n"
+        << "Solver visibility threshold: " << config_.visibilityThreshold << "\n"
         << "Light strength: " << config_.lightStrength << std::endl;
     std::cout << "############################ Output settings ############################## \n"
       << "timer: " << config_.timer << "\n"
-      << "saveLightSourceEnum: " << config_.saveLightSourceEnum << "\n"
+      << "saveLightSourceEnum: " << config_.saveCameFrom << "\n"
       << "saveLightSources: " << config_.saveLightSources << "\n"
       << "saveVisibilityField: " << config_.saveGlobalVisibility << "\n"
       << "saveLocalVisibility: " << config_.saveLocalVisibility << "\n"
-      << "saveVisibilityMapEnv: " << config_.saveVisibilityMapEnv << std::endl;
+      << "saveVisibilityMapEnv: " << config_.saveVisibilityField << std::endl;
   }
   // Return true if we successfully parsed the config file
   return true;

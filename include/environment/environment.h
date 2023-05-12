@@ -6,12 +6,11 @@
 
 #include <memory>
 #include <vector>
+#include <filesystem>
 
 #include <SFML/Graphics.hpp>
 
 namespace vbs {
-
-using FloatField = Field<float>;
 
 // Environment simulator
 class environment {
@@ -31,6 +30,7 @@ class environment {
    * @param [in] max_width Max obstacle width.
    * @param [in] min_height Min obstacle height.
    * @param [in] max_height Max obstacle height.
+   * @param [in] seedValue 0 by default.
    */
   void generateNewEnvironment(size_t nrows, size_t ncols, int nb_of_obstacles, 
     int min_width, int max_width, int min_height, int max_height, int seedValue = 0);
@@ -38,7 +38,7 @@ class environment {
   /*!
    * @brief Generate a random new environment from parsed config settings. Overwrites previously generated environment.
    */
-  void generateNewEnvironment();
+  void generateNewEnvironmentFromSettings();
 
   /*!
    * @brief Loads image data using SFML. Overwrites previously generated environment.
@@ -46,17 +46,15 @@ class environment {
    */
   void loadImage(const std::string& filename);
 
-  /*!
-   * @brief Helper function to load maps.
-   */
+  void loadMaps(const std::string& filename);
   std::vector<float> stringToFloatVector(const std::string& str, char delimiter);
 
   // Get visibility field shared pointer.
-  inline std::shared_ptr<FloatField> getVisibilityField() const { return visibilityField_; };
+  inline const auto& getVisibilityField() const { return sharedVisibilityField_; };
   // Get speed field shared pointer.
-  inline std::shared_ptr<FloatField> getSpeedField() const { return speedField_; };
-
-  inline const std::shared_ptr<Config> getConfig() const { return config_; };
+  inline const auto& getSpeedField() const { return sharedSpeedField_; };
+  // Get parsed configuration.
+  inline const auto& getConfig() const { return sharedConfig_; };
 
   // Deconstructor
   ~environment() = default;
@@ -65,19 +63,20 @@ class environment {
   size_t nrows_;
   size_t ncols_;
   size_t size_;
-  const float speedValue_ = 2.0;
+  double speedValue_ = 2.0;
   int seedValue_ = 1;
 
-  // Shared pointer to a Field object of type float that has map visibility values (complement of occupancy grid).
-  std::shared_ptr<FloatField> visibilityField_;
-  // Shared pointer to a Field object of type float that has map speed values.
-  std::shared_ptr<FloatField> speedField_;
-
+  // Shared pointer to a Field object of type double that has map visibility values (complement of occupancy grid).
+  Field<double, 1> sharedVisibilityField_;
+  // Shared pointer to a Field object of type double that has map speed values.
+  Field<double, 1> sharedSpeedField_;
   // Shared pointer to configuration
-  std::shared_ptr<Config> config_;
-
+  std::shared_ptr<Config> sharedConfig_;
   // Unique pointer to image holder
-  std::unique_ptr<sf::Image> loadedImage_;
+  std::unique_ptr<sf::Image> uniqueLoadedImage_;
+
+  void saveEnvironment();
+  void resetEnvironment();
 };
 
 } // namespace vbs

@@ -10,11 +10,6 @@
 
 namespace vbs {
 
-using DoubleField = Field<double>;
-using BoolField = Field<bool>;
-using SizeField = Field<size_t>;
-using point = std::pair<int, int>;
-
 // Node structure that is maintained by the heap: a double distance value for every x, y size_t values
 struct Node {
   size_t x, y;
@@ -43,18 +38,16 @@ class visibilityBasedSolver {
   void solve();
 
  private:
-  // Shared pointer to a Field object of type float that has map complement of occupancy grid.
-  std::shared_ptr<FloatField> occupancyComplement_;
-  // Shared pointer to a Field object of type double that accumulates visibility (for the heuristic).
-  std::unique_ptr<DoubleField> visibility_global_;
-  // local visibility field (at each iteration, the visibility field of current waypoint)
-  std::unique_ptr<DoubleField> visibility_;
-  // Unique pointer to a Field object of type size_t that enumerates the parent pixel of all pixels in the grid.
-  std::unique_ptr<SizeField> lightSource_enum_;
-  // Unique pointer to a pair that has x and y positions of every pivot/lightsource.
-  std::unique_ptr<std::pair<size_t, size_t>> lightSources_;
-  // Shared pointer to configuration parser
-  std::shared_ptr<Config> config_;
+
+  void reset();
+  Field<double, 1> occupancyComplement_;
+  Field<double, 0> visibility_global_;
+  Field<double, 0> visibility_;
+  Field<size_t, 0> cameFrom_;
+  Field<bool, 0> isUpdated_;
+  std::unique_ptr<point[]> lightSources_;
+
+  std::shared_ptr<Config> sharedConfig_;
 
   // Dimensions.
   size_t nrows_; size_t ncols_;
@@ -87,7 +80,7 @@ class visibilityBasedSolver {
   // Lightstrength, can be decreased. Can add later an alpha that has light decay, enforcing adding a new pivot periodically.
   const double lightStrength_ = 1.0;
   // Visibility threshold
-  double threshold_;
+  double visibilityThreshold_;
   // Ratio used in PDE update.
   double c_ = 1.0;
   // Global iterator.

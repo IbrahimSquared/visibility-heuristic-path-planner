@@ -11,17 +11,36 @@ namespace vbs {
 /******************************************************************************************************/
 /******************************************************************************************************/
 /******************************************************************************************************/
-visibilityBasedSolver::visibilityBasedSolver(environment& env) : config_(env.getConfig()) { 
+visibilityBasedSolver::visibilityBasedSolver(environment& env) : sharedConfig_(env.getConfig()) { 
   occupancyComplement_ = env.getVisibilityField();
-  nrows_ = occupancyComplement_->rows();
-  ncols_ = occupancyComplement_->cols();
-  visibility_global_ = std::make_unique<DoubleField>(nrows_, ncols_, 0.0);
-  visibility_ = std::make_unique<DoubleField>(nrows_, ncols_, 0.0);
-  scale_ = sqrt(nrows_ * nrows_ + ncols_ * ncols_);
-
-  lightSource_enum_ = std::make_unique<SizeField>(nrows_, ncols_, 1e5);
-  lightSources_.reset(new std::pair<size_t, size_t>[nrows_ * ncols_]);
+  ncols_ = occupancyComplement_.ncols();
+  nrows_ = occupancyComplement_.nrows();
+  visibilityThreshold_ = sharedConfig_->visibilityThreshold;
+  
+  // Init maps
+  reset();
 }
+
+/******************************************************************************************************/
+/******************************************************************************************************/
+/******************************************************************************************************/
+void visibilityBasedSolver::reset() {
+  visibility_global_ = Field<double, 0>(ncols_, nrows_, 0.0);
+  visibility_ = Field<double, 0>(ncols_, nrows_, 0.0);
+  cameFrom_ = Field<size_t, 0>(ncols_, nrows_, 1e5);
+  lightSources_.reset(new point[ncols_ * nrows_]);
+  scale_ = sqrt(nrows_ * nrows_ + ncols_ * ncols_);
+  heap_.reset();
+
+  // Reserve heap_
+  std::vector<Node> container;
+  container.reserve(ncols_*nrows_);
+  std::priority_queue<Node, std::vector<Node>, std::less<Node>> heap(std::less<Node>(), std::move(container));
+  heap_ = std::make_unique<std::priority_queue<Node>>(heap); 
+
+  nb_of_sources_ = 0;
+}
+
 
 /******************************************************************************************************/
 /******************************************************************************************************/
@@ -38,35 +57,45 @@ void visibilityBasedSolver::resetQueue() {
 /******************************************************************************************************/
 void visibilityBasedSolver::solve() {
   auto time_start = std::chrono::high_resolution_clock::now();
+
   // Init
-  auto start = config_->start;
-  auto end = config_->end;
+  auto start = sharedConfig_->start;
+  auto end = sharedConfig_->end;
+
+  if (sharedConfig_->mode == 2) {
+    start.second = nrows_ - 1 - start.second;
+    end.second = nrows_ - 1 - end.second;
+  }
+
   ls_ = start;
   end_ = end;
-  lightSources_.get()[nb_of_sources_] = start;
-  lightSource_enum_->at(start.first, start.second) = nb_of_sources_;
-  visibility_global_->at(end.first, end.second) = 0;
-  max_iter_ = config_->max_iter;
-  threshold_ = config_->threshold;
 
-  while (visibility_global_->at(end.first, end.second) <= threshold_) {
+  lightSources_[nb_of_sources_] = start;
+  cameFrom_(start.first, start.second) = nb_of_sources_;
+  visibility_global_(end.first, end.second) = 0;
+  max_iter_ = sharedConfig_->max_iter;
+  visibilityThreshold_ = sharedConfig_->visibilityThreshold;
+
+  
+
+  while (visibility_global_(end.first, end.second) <= visibilityThreshold_) {
     resetQueue();
     updateVisibility();
     auto node = heap_->top();
     ls_ = {node.x, node.y};
     ++nb_of_sources_;
-    lightSources_.get()[nb_of_sources_] = ls_;
+    lightSources_[nb_of_sources_] = ls_;
     if (nb_of_sources_ > max_iter_) {
       std::cout << "Max iters hit." << std::endl;
       break;
     }
   }
-  lightSources_.get()[nb_of_sources_] = end;
+  lightSources_[nb_of_sources_] = end;
 
   auto time_stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(time_stop - time_start);
-  if (!config_->silent) {
-    if (config_->timer) {
+  if (!sharedConfig_->silent) {
+    if (sharedConfig_->timer) {
       std::cout << "############################## Solver output ##############################" << "\n"
         << "Execution time in us: " << duration.count() << "us" << std::endl;
     }
@@ -82,13 +111,16 @@ void visibilityBasedSolver::updateVisibility() {
   double v = 0.0;
   double h;
   point parent;
+  double offset = 1.0;
 
-  visibility_->Reset();
-  // visibility_->Fill(0.0);
+  visibility_.reset();
   
   // Q1
-  max_col_ = nrows_ - ls_.first;
-  max_row_ = ncols_ - ls_.second;
+  max_col_ = ncols_ - ls_.first;
+  max_row_ = nrows_ - ls_.second;
+  
+  // std::cout << max_col_ << ", " << max_row_ << std::endl;
+  
   for (size_t i = 0; i < max_col_; ++i) {
     currentX = ls_.first + i;
     for (size_t j = 0; j < max_row_; ++j) {
@@ -96,27 +128,27 @@ void visibilityBasedSolver::updateVisibility() {
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_->at(currentX, currentY-1);
+        v = visibility_(currentX, currentY-1);
       } else if (j == 0) {
-        v = visibility_->at(currentX-1, currentY);
+        v = visibility_(currentX-1, currentY);
       } else if (i > j) {
-        c_ = (double)(currentY - ls_.second) / (currentX - ls_.first);
-        v = visibility_->at(currentX-1, currentY) - c_ * (visibility_->at(currentX-1, currentY) - visibility_->at(currentX-1, currentY-1));
+        c_ = (double)(currentY - ls_.second + offset) / (currentX - ls_.first + offset);
+        v = visibility_(currentX-1, currentY) - c_ * (visibility_(currentX-1, currentY) - visibility_(currentX-1, currentY-1));
       } else if (j > i) {
-        c_ = (double)(currentX - ls_.first) / (currentY - ls_.second);
-        v = visibility_->at(currentX, currentY-1) - c_ * (visibility_->at(currentX, currentY-1) - visibility_->at(currentX-1, currentY-1));
+        c_ = (double)(currentX - ls_.first + offset) / (currentY - ls_.second + offset);
+        v = visibility_(currentX, currentY-1) - c_ * (visibility_(currentX, currentY-1) - visibility_(currentX-1, currentY-1));
       }
-      v = v * occupancyComplement_->at(currentX, currentY);
-      visibility_->at(currentX, currentY) = v;
-      visibility_global_->at(currentX, currentY) = std::max(v, visibility_global_->at(currentX,currentY));
-      if (v >= threshold_) {
-        if (lightSource_enum_->at(currentX, currentY) == 1e5) {
-          lightSource_enum_->at(currentX, currentY) = nb_of_sources_; 
+      v = v * occupancyComplement_(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+      visibility_global_(currentX, currentY) = std::max(v, visibility_global_(currentX,currentY));
+      if (v >= visibilityThreshold_) {
+        if (cameFrom_(currentX, currentY) == 1e5) {
+          cameFrom_(currentX, currentY) = nb_of_sources_; 
         }
       }
-      if (visibility_global_->at(currentX, currentY) >= threshold_) {
-        parent = lightSources_.get()[lightSource_enum_->at(currentX, currentY)];
-        h = (scale_ * visibility_global_->at(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
+      if (visibility_global_(currentX, currentY) >= visibilityThreshold_) {
+        parent = lightSources_[cameFrom_(currentX, currentY)];
+        h = (scale_ * visibility_global_(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
          eval_d(currentX, currentY, parent.first, parent.second));
         heap_->push(Node{currentX, currentY, h});
       }
@@ -124,7 +156,7 @@ void visibilityBasedSolver::updateVisibility() {
   }
   // Q2
   max_col_ = ls_.first;
-  max_row_ = ncols_ - ls_.second;
+  max_row_ = nrows_ - ls_.second;
   for (size_t i = 0; i < max_col_; ++i) {
     currentX = ls_.first - i;
     for (size_t j = 0; j < max_row_; ++j) {
@@ -132,27 +164,27 @@ void visibilityBasedSolver::updateVisibility() {
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_->at(currentX, currentY-1);
+        v = visibility_(currentX, currentY-1);
       } else if (j == 0) {
-        v = visibility_->at(currentX+1, currentY);
+        v = visibility_(currentX+1, currentY);
       } else if (i > j) {
-        c_ = (double)(currentY - ls_.second) / (ls_.first - currentX);
-        v = visibility_->at(currentX+1, currentY) - c_ * (visibility_->at(currentX+1, currentY) - visibility_->at(currentX+1, currentY-1));
+        c_ = (double)(currentY - ls_.second + offset) / (ls_.first - currentX + offset);
+        v = visibility_(currentX+1, currentY) - c_ * (visibility_(currentX+1, currentY) - visibility_(currentX+1, currentY-1));
       } else if (j > i) {
-        c_ = (double)(ls_.first - currentX) / (currentY - ls_.second);
-        v = visibility_->at(currentX, currentY-1) - c_ * (visibility_->at(currentX, currentY-1) - visibility_->at(currentX+1, currentY-1));
+        c_ = (double)(ls_.first - currentX + offset) / (currentY - ls_.second + offset);
+        v = visibility_(currentX, currentY-1) - c_ * (visibility_(currentX, currentY-1) - visibility_(currentX+1, currentY-1));
       }
-      v = v * occupancyComplement_->at(currentX, currentY);
-      visibility_->at(currentX, currentY) = v;
-      visibility_global_->at(currentX, currentY) = std::max(v, visibility_global_->at(currentX,currentY));
-      if (v >= threshold_) {
-        if (lightSource_enum_->at(currentX, currentY) == 1e5) {
-          lightSource_enum_->at(currentX, currentY) = nb_of_sources_;
+      v = v * occupancyComplement_(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+      visibility_global_(currentX, currentY) = std::max(v, visibility_global_(currentX,currentY));
+      if (v >= visibilityThreshold_) {
+        if (cameFrom_(currentX, currentY) == 1e5) {
+          cameFrom_(currentX, currentY) = nb_of_sources_;
         }
       }
-      if (visibility_global_->at(currentX, currentY) >= threshold_) {
-        parent = lightSources_.get()[lightSource_enum_->at(currentX, currentY)];
-        h = (scale_ * visibility_global_->at(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
+      if (visibility_global_(currentX, currentY) >= visibilityThreshold_) {
+        parent = lightSources_[cameFrom_(currentX, currentY)];
+        h = (scale_ * visibility_global_(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
          eval_d(currentX, currentY, parent.first, parent.second));
         heap_->push(Node{currentX, currentY, h});
       }
@@ -168,34 +200,34 @@ void visibilityBasedSolver::updateVisibility() {
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_->at(currentX, currentY+1);
+        v = visibility_(currentX, currentY+1);
       } else if (j == 0) {
-        v = visibility_->at(currentX+1, currentY);
+        v = visibility_(currentX+1, currentY);
       } else if (i > j) {
-        c_ = (double)(ls_.second - currentY) / (ls_.first - currentX);
-        v = visibility_->at(currentX+1, currentY) - c_ * (visibility_->at(currentX+1, currentY) - visibility_->at(currentX+1, currentY+1));
+        c_ = (double)(ls_.second - currentY + offset) / (ls_.first - currentX + offset);
+        v = visibility_(currentX+1, currentY) - c_ * (visibility_(currentX+1, currentY) - visibility_(currentX+1, currentY+1));
       } else if (j > i) {
-        c_ = (double)(ls_.first - currentX) / (ls_.second - currentY);
-        v = visibility_->at(currentX, currentY+1) - c_ * (visibility_->at(currentX, currentY+1) - visibility_->at(currentX+1, currentY+1));
+        c_ = (double)(ls_.first - currentX + offset) / (ls_.second - currentY + offset);
+        v = visibility_(currentX, currentY+1) - c_ * (visibility_(currentX, currentY+1) - visibility_(currentX+1, currentY+1));
       }
-      v = v * occupancyComplement_->at(currentX, currentY);
-      visibility_->at(currentX, currentY) = v;
-      visibility_global_->at(currentX, currentY) = std::max(v, visibility_global_->at(currentX,currentY));
-      if (v >= threshold_) {
-        if (lightSource_enum_->at(currentX, currentY) == 1e5) {
-          lightSource_enum_->at(currentX, currentY) = nb_of_sources_;
+      v = v * occupancyComplement_(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+      visibility_global_(currentX, currentY) = std::max(v, visibility_global_(currentX,currentY));
+      if (v >= visibilityThreshold_) {
+        if (cameFrom_(currentX, currentY) == 1e5) {
+          cameFrom_(currentX, currentY) = nb_of_sources_;
         }
       }
-      if (visibility_global_->at(currentX, currentY) >= threshold_) {
-        parent = lightSources_.get()[lightSource_enum_->at(currentX, currentY)];
-        h = (scale_ * visibility_global_->at(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
+      if (visibility_global_(currentX, currentY) >= visibilityThreshold_) {
+        parent = lightSources_[cameFrom_(currentX, currentY)];
+        h = (scale_ * visibility_global_(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
          eval_d(currentX, currentY, parent.first, parent.second));
         heap_->push(Node{currentX, currentY, h});
       }
     }
   }
   // Q4
-  max_col_ = nrows_ - ls_.first;
+  max_col_ = ncols_ - ls_.first;
   max_row_ = ls_.second;
   for (size_t i = 0; i < max_col_; ++i) {
     currentX = ls_.first + i;
@@ -204,27 +236,27 @@ void visibilityBasedSolver::updateVisibility() {
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_->at(currentX, currentY+1);
+        v = visibility_(currentX, currentY+1);
       } else if (j == 0) {
-        v = visibility_->at(currentX-1, currentY);
+        v = visibility_(currentX-1, currentY);
       } else if (i > j) {
-        c_ = (double)(ls_.second - currentY) / (currentX - ls_.first);
-        v = visibility_->at(currentX-1, currentY) - c_ * (visibility_->at(currentX-1, currentY) - visibility_->at(currentX-1, currentY+1));
+        c_ = (double)(ls_.second - currentY + offset) / (currentX - ls_.first + offset);
+        v = visibility_(currentX-1, currentY) - c_ * (visibility_(currentX-1, currentY) - visibility_(currentX-1, currentY+1));
       } else if (j > i) {
-        c_ = (double)(currentX - ls_.first) / (ls_.second - currentY);
-        v = visibility_->at(currentX, currentY+1) - c_ * (visibility_->at(currentX, currentY+1) - visibility_->at(currentX-1, currentY+1));
+        c_ = (double)(currentX - ls_.first + offset) / (ls_.second - currentY + offset);
+        v = visibility_(currentX, currentY+1) - c_ * (visibility_(currentX, currentY+1) - visibility_(currentX-1, currentY+1));
       }
-      v = v * occupancyComplement_->at(currentX, currentY);
-      visibility_->at(currentX, currentY) = v;
-      visibility_global_->at(currentX, currentY) = std::max(v, visibility_global_->at(currentX,currentY));
-      if (v >= threshold_) {
-        if (lightSource_enum_->at(currentX, currentY) == 1e5) {
-          lightSource_enum_->at(currentX, currentY) = nb_of_sources_;
+      v = v * occupancyComplement_(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+      visibility_global_(currentX, currentY) = std::max(v, visibility_global_(currentX,currentY));
+      if (v >= visibilityThreshold_) {
+        if (cameFrom_(currentX, currentY) == 1e5) {
+          cameFrom_(currentX, currentY) = nb_of_sources_;
         }
       }
-      if (visibility_global_->at(currentX, currentY) >= threshold_) {
-        parent = lightSources_.get()[lightSource_enum_->at(currentX, currentY)];
-        h = (scale_ * visibility_global_->at(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
+      if (visibility_global_(currentX, currentY) >= visibilityThreshold_) {
+        parent = lightSources_[cameFrom_(currentX, currentY)];
+        h = (scale_ * visibility_global_(currentX, currentY)) + (eval_d(currentX, currentY, end_.first, end_.second) +
          eval_d(currentX, currentY, parent.first, parent.second));
         heap_->push(Node{currentX, currentY, h});
       }
@@ -238,7 +270,7 @@ void visibilityBasedSolver::updateVisibility() {
 void visibilityBasedSolver::saveResults() {
   namespace fs = std::filesystem;
   // Define the path to the output file
-  std::string path = "./output/LightSourceEnum.txt";
+  std::string path = "./output/cameFrom.txt";
   // Check if the directory exists, and create it if it doesn't
   fs::path dir = fs::path(path).parent_path();
   if (!fs::exists(dir)) {
@@ -248,7 +280,7 @@ void visibilityBasedSolver::saveResults() {
     }
   }
 
-  if (config_->saveLightSourceEnum) {
+  if (sharedConfig_->saveCameFrom) {
     std::fstream of(path, std::ios::out | std::ios::trunc);
     if (!of.is_open()) {
       std::cerr << "Failed to open output file " << path << std::endl;
@@ -256,19 +288,28 @@ void visibilityBasedSolver::saveResults() {
     }
     if (of.is_open()) {
       std::ostream& os = of;
-      for (int i = 0; i < nrows_; ++i) { 
-        for (int j = 0; j < ncols_; ++j) {
-          os << lightSource_enum_->at(i,j) << " "; 
+      if (sharedConfig_->mode == 2) {
+        for (int j = nrows_ - 1; j >= 0; --j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << cameFrom_(i,j) << " "; 
+          }
+          os << "\n";
         }
-        os<< "\n";
+      } else {
+        for (int j = 0; j < nrows_; ++j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << cameFrom_(i,j) << " "; 
+          }
+          os << "\n";
+        }
       }
       of.close();
     }
-    if (!config_->silent) {
-      std::cout << "Saved LightSourceEnum" << std::endl;
+    if (!sharedConfig_->silent) {
+      std::cout << "Saved cameFrom_" << std::endl;
     }
   }
-  if (config_->saveLightSources) {
+  if (sharedConfig_->saveLightSources) {
     path = "./output/lightSources.txt";
     std::fstream of(path, std::ios::out | std::ios::trunc);
     if (!of.is_open()) {
@@ -278,16 +319,20 @@ void visibilityBasedSolver::saveResults() {
     if (of.is_open()) {
       std::ostream& os = of;
       for (int i = 0; i < nb_of_sources_; ++i) { 
-        os << lightSources_.get()[i].first << " " << lightSources_.get()[i].second ; 
-        os<< "\n";
+        if (sharedConfig_->mode == 2) {
+          os << lightSources_[i].first << " " << nrows_ - 1 - lightSources_[i].second; 
+        } else {
+          os << lightSources_[i].first << " " << lightSources_[i].second; 
+        }
+        os << "\n";
       }
       of.close();
     }
-    if (!config_->silent) {
+    if (!sharedConfig_->silent) {
       std::cout << "Saved lightSources" << std::endl;
     }
   }
-  if (config_->saveGlobalVisibility) {
+  if (sharedConfig_->saveGlobalVisibility) {
     path = "./output/VisibilityMap.txt";
     std::fstream of(path, std::ios::out | std::ios::trunc);
     if (!of.is_open()) {
@@ -296,19 +341,28 @@ void visibilityBasedSolver::saveResults() {
     }
     if (of.is_open()) {
       std::ostream& os = of;
-      for (size_t i = 0; i < nrows_; ++i) { 
-        for (size_t j = 0; j < ncols_; ++j) {
-          os << visibility_global_->at(i, j) << " "; 
+      if (sharedConfig_->mode == 2) {
+        for (int j = nrows_ - 1; j >= 0; --j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << visibility_global_(i, j) << " "; 
+          }
+          os << "\n";
         }
-        os << "\n";
+      } else {
+        for (int j = 0; j < nrows_; ++j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << visibility_global_(i, j) << " "; 
+          }
+          os << "\n";
+        }
       }
       of.close();
     }
-    if (!config_->silent) {
+    if (!sharedConfig_->silent) {
       std::cout << "Saved GlobalVisibility" << std::endl;
     }
   }
-  if (config_->saveLocalVisibility) {
+  if (sharedConfig_->saveLocalVisibility) {
     path = "./output/LocalVisibilityMap.txt";
     std::fstream of(path, std::ios::out | std::ios::trunc);
     if (!of.is_open()) {
@@ -317,20 +371,29 @@ void visibilityBasedSolver::saveResults() {
     }
     if (of.is_open()) {
       std::ostream& os = of;
-      for (size_t i = 0; i < nrows_; ++i) { 
-        for (size_t j = 0; j < ncols_; ++j) {
-          os << visibility_->at(i, j) << " "; 
+      if (sharedConfig_->mode == 2) {
+        for (int j = nrows_ - 1; j >= 0; --j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << visibility_(i, j) << " "; 
+          }
+          os << "\n";
         }
-        os << "\n";
+      } else {
+        for (int j = 0; j < nrows_; ++j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << visibility_(i, j) << " "; 
+          }
+          os << "\n";
+        }
       }
       of.close();
     }
-    if (!config_->silent) {
+    if (!sharedConfig_->silent) {
       std::cout << "Saved LocalVisibility" << std::endl;
     }
   }
-  if (config_->saveVisibilityMapEnv) {
-    path = "./output/VisibilityMap_env.txt";
+  if (sharedConfig_->saveVisibilityField) {
+    path = "./output/visibilityField.txt";
     std::fstream of(path, std::ios::out | std::ios::trunc);
     if (!of.is_open()) {
       std::cerr << "Failed to open output file " << path << std::endl;
@@ -338,15 +401,24 @@ void visibilityBasedSolver::saveResults() {
     }
     if (of.is_open()) {
       std::ostream& os = of;
-      for (size_t i = 0; i < nrows_; ++i) { 
-        for (size_t j = 0; j < ncols_; ++j) {
-          os << occupancyComplement_->at(i, j) << " "; 
+      if (sharedConfig_->mode == 2) {
+        for (int j = nrows_ - 1; j >= 0; --j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << occupancyComplement_(i, j) << " "; 
+          }
+          os << "\n";
         }
-        os << "\n";
+      } else {
+        for (int j = 0; j < nrows_; ++j){
+          for (size_t i = 0; i < ncols_; ++i) {
+            os << occupancyComplement_(i, j) << " "; 
+          }
+          os << "\n";
+        }
       }
       of.close();
     }
-    if (!config_->silent) {
+    if (!sharedConfig_->silent) {
       std::cout << "Saved OccupancyComplement" << std::endl;
     }
   }
