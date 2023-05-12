@@ -1,5 +1,10 @@
 # Visibility & Visibility Heuristic Path Planning
-This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem and an Accompanying Heuristic Path Planner on Cartesian Grids (IROS2023 pending, will soon attach arxiv paper).
+This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem and an Accompanying Heuristic Path Planner on Cartesian Grids (IROS2023 pending, will soon attach arxiv paper). <br>
+
+
+# Important: Standard for inputting/reading images
+Mode=2 reads an image map, the path of which is specified in imagePath in settings.config, for example maze_1.png in the folder images. <br> 
+Note that initialFrontline in settings.config  is in the form of {p1x,p1y} [ncols-paint_y nrows-paint_x].
 
 # Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
