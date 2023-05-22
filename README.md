@@ -1,5 +1,6 @@
 # Visibility & Visibility Heuristic Path Planning
 This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem and an Accompanying Heuristic Path Planner on Cartesian Grids (IROS2023 pending, will soon attach arxiv paper). <br>
+Provides a linear complexity & highly efficient 2D visibility solution. For example, a 101x101 grid can be processed at ~20kHz in C++ on an i7-9750h processor. <br>
 
 # Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
