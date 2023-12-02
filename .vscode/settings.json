@@ -76,7 +76,10 @@
     "map": "cpp",
     "queue": "cpp",
     "codecvt": "cpp",
-    "iomanip": "cpp"
+    "iomanip": "cpp",
+    "bitset": "cpp",
+    "set": "cpp",
+    "shared_mutex": "cpp"
   },
   "cmake.configureOnOpen": true,
   "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe",
