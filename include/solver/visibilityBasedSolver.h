@@ -40,17 +40,18 @@ class visibilityBasedSolver {
  private:
 
   void reset();
-  Field<double, 1> occupancyComplement_;
-  Field<double, 0> visibility_global_;
-  Field<double, 0> visibility_;
-  Field<size_t, 0> cameFrom_;
-  Field<bool, 0> isUpdated_;
+  std::shared_ptr<Field<double>> occupancyComplement_;
+  std::unique_ptr<Field<double>> visibility_global_;
+  std::unique_ptr<Field<double>> visibility_;
+  std::unique_ptr<Field<size_t>> cameFrom_;
+  std::unique_ptr<Field<bool>> isUpdated_;
+   
   std::unique_ptr<point[]> lightSources_;
 
   std::shared_ptr<Config> sharedConfig_;
 
   // Dimensions.
-  size_t nrows_; size_t ncols_;
+  size_t ny_; size_t nx_;
 
   /*!
    * @brief Currently a Euclidean measure of the distance but can be generalized.
@@ -105,7 +106,7 @@ class visibilityBasedSolver {
   point pt_min_;
 
   // Dimensions
-  size_t max_col_, max_row_;
+  size_t max_x_, max_y_;
 
   // For scaling the visibility in the heuristic
   double scale_ = 0;
