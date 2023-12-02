@@ -60,16 +60,16 @@ class environment {
   ~environment() = default;
 
  private:
-  size_t nrows_;
-  size_t ncols_;
+  size_t ny_;
+  size_t nx_;
   size_t size_;
   double speedValue_ = 2.0;
   int seedValue_ = 1;
 
-  // Shared pointer to a Field object of type double that has map visibility values (complement of occupancy grid).
-  Field<double, 1> sharedVisibilityField_;
-  // Shared pointer to a Field object of type double that has map speed values.
-  Field<double, 1> sharedSpeedField_;
+  // Shared pointer to a Field object of type double that has map occupancy values.
+  std::shared_ptr<Field<double>> sharedVisibilityField_;
+  std::shared_ptr<Field<double>> sharedSpeedField_;
+
   // Shared pointer to configuration
   std::shared_ptr<Config> sharedConfig_;
   // Unique pointer to image holder
