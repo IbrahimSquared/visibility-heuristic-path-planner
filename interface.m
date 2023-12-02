@@ -79,6 +79,30 @@ if plotVisibilityField
     set(gca,'LooseInset',get(gca,'TightInset'));
 end
 
+%% cameFrom
+filename_cameFrom = "output/cameFrom.txt";
+T = readtable(filename_cameFrom, 'Delimiter',' ');
+cameFrom = T.Variables + 1;
+plotCameFrom = false;
+
+if plotCameFrom
+    figure(3)
+    clf
+    set(gcf, 'Name', 'cameFrom_')
+    mesh(cameFrom,'FaceLighting','phong','FaceColor','interp',...
+        'AmbientStrength',0.5, 'EdgeColor', 'interp','FaceAlpha','1.0');
+    % colormap(gray)
+
+    view(0,90)
+    axis equal
+    axis([1 ny 1 nx])
+    hold on
+
+    grid off
+    % set(gca, 'xtick', [-1e6 1e6]);
+    % set(gca, 'ytick', [-1e6 1e6]);
+end
+
 %% Visibility heuristic path planning plots
 filename_visibility = "output/VisibilityMap.txt";
 T_visibility = readtable(filename_visibility,'Delimiter',' ');
@@ -110,7 +134,7 @@ pivots = pivots + 1;
 
 for i = 1:size(pivots,1)
     pt_ = pivots(i,:);
-    plot3(pt_(1), pt_(2),1.15,'o','MarkerFaceColor','magenta',...
+    plot3(pt_(1), pt_(2),1.15,'o','MarkerFaceColor','cyan',...
       'MarkerEdgeColor','black','MarkerSize', 14, 'LineWidth', 1)
 end
 
@@ -118,14 +142,10 @@ sp_o = settings.start + 1;
 ep_o = settings.end + 1;
 pt = ep_o;
 
-filename_cameFrom = "output/cameFrom.txt";
-T = readtable(filename_cameFrom, 'Delimiter',' ');
-cameFrom = T.Variables + 1;
-
 % Plot the path as lines
 path = [pt];
 total_distance = 0;
-while true 
+while true
     if pt(1) == sp_o(1) && pt(2) == sp_o(2)
         break
     end
@@ -133,7 +153,6 @@ while true
     plot3(pt(1), pt(2),1.15,'o','MarkerFaceColor','magenta',...
           'MarkerEdgeColor','black','MarkerSize', 14, 'LineWidth', 1)
     pt = pivots(cameFrom(pt(2), pt(1)),:);
-
     path(end+1,:) = pt;
 
     total_distance = total_distance + norm(path(end,:) - path(end-1,:));
