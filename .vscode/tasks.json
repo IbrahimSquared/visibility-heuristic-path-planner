@@ -30,8 +30,6 @@
           "command": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\g++.exe",
           "args": [
               "-O3",
-              "-Ofast",
-              "-march=native",
               "-std=c++20",
               "-o",
               "${workspaceFolder}\\visibility_heuristic_planner.exe",
@@ -39,12 +37,6 @@
               "-lsfml-graphics",
               "-I",
               "${workspaceFolder}\\include",
-              "-Wall",
-              "-Wextra",
-              "-Wpedantic",
-              "-Wshadow",
-              "-Wformat=2",
-              "-Wnull-dereference"
           ],
           "options": {
               "cwd": "${fileDirname}"
