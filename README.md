@@ -53,8 +53,8 @@ The code then reads the results and plots them nicely.
 
 
 # Important: Standard for inputting/reading images in C++
-Mode=2 reads an image map, the path of which is specified in imagePath in settings.config, for example lab_image_edited.png (893x646) in the folder images.
-Bottom left corner is the origin
+Mode=2 reads an image map, the path of which is specified in imagePath in settings.config, for example lab_image_edited.png (893x646) in the folder images. <br>
+Bottom left corner is the origin. <br>
 This is relevant for selecting start/end points. This standard can ofcourse be changed.
 
 # Instructions to build the C++ code on Windows in Visual Studio Code
