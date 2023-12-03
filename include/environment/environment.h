@@ -19,7 +19,7 @@ class environment {
    * Constructor.
    * @brief Initialize an environment.
    */
-  environment(Config& config);
+  explicit environment(Config& config);
 
   /*!
    * @brief Generate a random new environment on request. Overwrites previously generated environment.

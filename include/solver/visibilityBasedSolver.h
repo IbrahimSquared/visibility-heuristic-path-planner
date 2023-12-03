@@ -29,7 +29,7 @@ class visibilityBasedSolver {
    * @brief Initialize the solver with an environment.
    * @param [in] env Environment reference.
    */
-  visibilityBasedSolver(environment& env);
+  explicit visibilityBasedSolver(environment& env);
   // Deconstructor
   ~visibilityBasedSolver() = default;
 

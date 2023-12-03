@@ -13,7 +13,7 @@ class Field {
     using size_t = std::size_t;
     Field() : nx_(0), ny_(0), size_(0), data_(nullptr) {}
 
-    Field(size_t nx, size_t ny, T default_value) : nx_(nx), ny_(ny), size_(nx * ny) {
+    explicit Field(size_t nx, size_t ny, T default_value) : nx_(nx), ny_(ny), size_(nx * ny) {
       data_ = std::make_unique<T[]>(size_);
       for (size_t i = 0; i < size_; ++i) {
         data_[i] = default_value;
