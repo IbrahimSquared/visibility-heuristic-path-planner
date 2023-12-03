@@ -11,8 +11,9 @@ namespace vbs {
 /******************************************************************************************************/
 /******************************************************************************************************/
 /******************************************************************************************************/
-visibilityBasedSolver::visibilityBasedSolver(environment& env) : sharedConfig_(env.getConfig()) { 
-  occupancyComplement_ = env.getVisibilityField();
+visibilityBasedSolver::visibilityBasedSolver(environment& env) 
+  : sharedConfig_(env.getConfig()), 
+  occupancyComplement_(env.getVisibilityField()) { 
   nx_ = occupancyComplement_->nx();
   ny_ = occupancyComplement_->ny();
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
