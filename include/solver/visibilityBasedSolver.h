@@ -8,6 +8,8 @@
 #include <vector>
 #include <queue>
 
+#include <SFML/Graphics.hpp>
+
 namespace vbs {
 
 // Node structure that is maintained by the heap: a double distance value for every x, y size_t values
@@ -50,6 +52,10 @@ class visibilityBasedSolver {
 
   std::shared_ptr<Config> sharedConfig_;
 
+  std::unique_ptr<sf::Image> uniqueLoadedImage_;
+
+  void reconstructPath(const Node& current, std::vector<point>& resultingPath);
+  
   // Dimensions.
   size_t ny_; size_t nx_;
 
@@ -72,6 +78,7 @@ class visibilityBasedSolver {
 
   // Save results
   void saveResults();
+  void saveImageWithPath(const std::vector<point>& path);
 
   // Heap to maintain the heuristic
   std::unique_ptr<std::priority_queue<Node>> heap_;

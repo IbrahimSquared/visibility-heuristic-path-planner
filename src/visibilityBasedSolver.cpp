@@ -17,6 +17,21 @@ visibilityBasedSolver::visibilityBasedSolver(environment& env) : sharedConfig_(e
   ny_ = occupancyComplement_->ny();
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
   
+  // Init environment image
+  uniqueLoadedImage_.reset(std::make_unique<sf::Image>().release());
+  uniqueLoadedImage_->create(nx_, ny_, sf::Color::Black);
+  sf::Color color;
+  color.a = 1;
+  for (size_t j = ny_ - 1; j > 0; --j) {
+    for (size_t i = 0; i < nx_; ++i) {
+      if (occupancyComplement_->get(i,j) < 1) {
+        uniqueLoadedImage_->setPixel(i, ny_ - 1 - j, color.Black);
+      } else {
+        uniqueLoadedImage_->setPixel(i, ny_ - 1 - j, color.White);
+      }
+    }
+  }
+  
   // Init maps
   reset();
 }
@@ -118,6 +133,8 @@ void visibilityBasedSolver::solve() {
     }
   }
   saveResults();
+  std::vector<point> path;
+  reconstructPath(Node{static_cast<size_t>(end_.first), static_cast<size_t>(end_.second), 0}, path);
 }
 
 /******************************************************************************************************/
@@ -437,6 +454,75 @@ void visibilityBasedSolver::saveResults() {
       std::cout << "Saved OccupancyComplement" << std::endl;
     }
   }
+}
+
+/******************************************************************************************************/
+/******************************************************************************************************/
+/******************************************************************************************************/
+void visibilityBasedSolver::reconstructPath(const Node& current, std::vector<point>& resultingPath) {
+  int x = current.x, y = current.y;
+  double t = cameFrom_->get(x, y);
+  double t_old = INFINITY;
+  while (t != t_old) {
+    resultingPath.push_back({x, y});
+    t_old = t;
+    x = lightSources_[t].first; y = lightSources_[t].second;
+    t = cameFrom_->get(x, y);
+  }
+  resultingPath.push_back({x, y});
+  std::reverse(resultingPath.begin(), resultingPath.end());
+  
+  // compute total distance
+  double totalDistance = 0;
+  for (size_t i = 0; i < resultingPath.size() - 1; ++i) {
+    totalDistance += eval_d(resultingPath[i].first, resultingPath[i].second, resultingPath[i+1].first, resultingPath[i+1].second);
+  }
+  if (!sharedConfig_->silent) {
+    std::cout << "Path length: " << totalDistance << std::endl;
+  }
+
+  if (sharedConfig_->saveResults) {
+    saveImageWithPath(resultingPath);
+  }
+  return;
+}
+
+/******************************************************************************************************/
+/******************************************************************************************************/
+/******************************************************************************************************/
+void visibilityBasedSolver::saveImageWithPath(const std::vector<point>& path) {
+  sf::Image image;
+  image = *uniqueLoadedImage_;
+  sf::Color color;
+  color.a = 1;
+  int x0, y0, x1, y1;
+  int dx, dy, sx, sy, err;
+  
+  for (size_t i = 0; i < path.size() - 1; ++i) {
+    x0 = path[i].first; y0 = ny_ - 1 - path[i].second;
+    x1 = path[i+1].first; y1 = ny_ - 1 - path[i+1].second;
+
+    dx = std::abs(x1 - x0);
+    dy = std::abs(y1 - y0);
+    sx = (x0 < x1) ? 1 : -1;
+    sy = (y0 < y1) ? 1 : -1;
+    err = dx - dy;
+    
+    while (x0 != x1 || y0 != y1) {
+      image.setPixel(x0, y0, color.Magenta);
+      int e2 = 2 * err;
+      if (e2 > -dy) {
+          err -= dy;
+          x0 += sx;
+      }
+      if (e2 < dx) {
+          err += dx;
+          y0 += sy;
+      }
+    }
+  }
+  std::string imageName = "output/ResultingPath.png";
+  image.saveToFile(imageName);
 }
 
 } // namespace vbs

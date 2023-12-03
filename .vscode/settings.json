@@ -79,7 +79,10 @@
     "iomanip": "cpp",
     "bitset": "cpp",
     "set": "cpp",
-    "shared_mutex": "cpp"
+    "shared_mutex": "cpp",
+    "charconv": "cpp",
+    "format": "cpp",
+    "span": "cpp"
   },
   "cmake.configureOnOpen": true,
   "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe",
