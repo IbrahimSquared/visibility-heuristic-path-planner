@@ -80,3 +80,9 @@ We used: <br>
 Make sure cmake is working using ``` cmake --version ```, a reload may be necessary <br>
 Set the cmakePath accordingly in settings.json: <br>
 ``` "cmake.cmakePath": "C:\\Workdir\\Programs\\msys64\\mingw64\\bin\\cmake.exe", ```
+
+# To build or compile using cmake in Linux
+Set compiler path (or comment that part), make sure SFML libraries are installed, then: <br>
+``` mkdir build && cd build ``` <br>
+``` cmake .. ```
+``` make ```
