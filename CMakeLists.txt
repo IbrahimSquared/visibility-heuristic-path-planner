@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 
 project(visibility_heuristic_planner)
 
-# Set the compiler to use
-set(CMAKE_CXX_COMPILER C:/Workdir/Programs/msys64/mingw64/bin/g++.exe)
+# Set the compiler to use if needed 
+# set(CMAKE_CXX_COMPILER C:/Workdir/Programs/msys64/mingw64/bin/g++.exe)
+# set(CMAKE_CXX_COMPILER /usr/bin/g++)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -11,7 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 include_directories(include)
-include_directories(C:/Workdir/Programs/msys64/mingw64/include)
+# include_directories(C:/Workdir/Programs/msys64/mingw64/include) if needed
 add_executable(visibility_heuristic_planner src/main.cpp src/environment.cpp src/visibilityBasedSolver.cpp src/ConfigParser.cpp)
 
 # Find the SFML package
