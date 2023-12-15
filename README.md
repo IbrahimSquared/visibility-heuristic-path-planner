@@ -84,5 +84,5 @@ Set the cmakePath accordingly in settings.json: <br>
 # To build or compile using cmake in Linux
 Set compiler path (or comment that part), make sure SFML libraries are installed, then: <br>
 ``` mkdir build && cd build ``` <br>
-``` cmake .. ```
+``` cmake .. ``` <br>
 ``` make ```
