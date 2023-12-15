@@ -86,19 +86,23 @@ void visibilityBasedSolver::solve() {
 
   // check if start and end are valid
   if (start.first < 0 || start.first >= nx_ || start.second < 0 || start.second >= ny_) {
+    std::cout << "############################## Solver output ##############################" << std::endl;
     std::cout << "Start point is out of bounds." << std::endl;
     return;
   }
   if (end.first < 0 || end.first >= nx_ || end.second < 0 || end.second >= ny_) {
+    std::cout << "############################## Solver output ##############################" << std::endl;
     std::cout << "End point is out of bounds." << std::endl;
     return;
   }
   if (occupancyComplement_->get(start.first, start.second) == 0) {
-    std::cout << "Start point is not valid." << std::endl;
+    std::cout << "############################## Solver output ##############################" << std::endl;
+    std::cout << "Start point is not valid (occupied)" << std::endl;
     return;
   }
   if (occupancyComplement_->get(end.first, end.second) == 0) {
-    std::cout << "End point is not valid." << std::endl;
+    std::cout << "############################## Solver output ##############################" << std::endl;
+    std::cout << "End point is not valid (occupied)" << std::endl;
     return;
   }
 
@@ -519,6 +523,41 @@ void visibilityBasedSolver::saveImageWithPath(const std::vector<point>& path) {
       if (e2 < dx) {
           err += dx;
           y0 += sy;
+      }
+    }
+  }
+  int ballRadius = sharedConfig_->ballRadius;
+  for (size_t i = 0; i < path.size(); ++i) {
+    x0 = path[i].first; y0 = ny_ - 1 - path[i].second;
+    for (int j = -ballRadius; j <= ballRadius; ++j) {
+      for (int k = -ballRadius; k <= ballRadius; ++k) {
+        if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+          if (j*j + k*k <= ballRadius*ballRadius) {
+            image.setPixel(x0 + j, y0 + k, color.Cyan);
+          }
+        }
+      }
+    }
+  }
+
+  x0 = path[0].first; y0 = ny_ - 1 - path[0].second;
+  for (int j = -ballRadius; j <= ballRadius; ++j) {
+    for (int k = -ballRadius; k <= ballRadius; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j*j + k*k <= ballRadius*ballRadius) {
+          image.setPixel(x0 + j, y0 + k, color.Green);
+        }
+      }
+    }
+  }
+
+  x0 = path[path.size() - 1].first; y0 = ny_ - 1 - path[path.size() - 1].second;
+  for (int j = -ballRadius; j <= ballRadius; ++j) {
+    for (int k = -ballRadius; k <= ballRadius; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j*j + k*k <= ballRadius*ballRadius) {
+          image.setPixel(x0 + j, y0 + k, color.Red);
+        }
       }
     }
   }

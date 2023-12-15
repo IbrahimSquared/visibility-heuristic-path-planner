@@ -8,7 +8,16 @@ using namespace vbs;
 int main() {
   // Parse settings
   ConfigParser parser;
-  parser.parse("config/settings.config");
+  if (!parser.parse("config/settings.config")) {
+    std::cout << "########################### Parsing results: ####"
+                 "########################## \n";
+    std::cout << "Error parsing config file" << std::endl;
+    return 1;
+  } else {
+    std::cout << "########################### Parsing results: ####"
+                 "########################## \n";
+    std::cout << "Config file parsed successfully \n" << std::endl;
+  }
   auto config = parser.getConfig();
 
   // Initialize environment

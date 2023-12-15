@@ -34,6 +34,7 @@ struct Config {
   bool saveGlobalVisibility = true;
   bool saveVisibilityField = true;
   bool silent = false;
+  int ballRadius = 5;
 };
 
 class ConfigParser {
