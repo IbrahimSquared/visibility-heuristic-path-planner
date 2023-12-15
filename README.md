@@ -20,6 +20,10 @@ Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_5_example.jpg) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_6_example.jpg) <br>
 
+# Visibility Heuristic Path Planner SFML Generated Image Sample
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/SFMLResultingPath.png) <br>
+
+
 # MATLAB code
 We provide a commented MATLAB implementation of all the demonstrations provided in the paper. <br>
   1. The environments can be randomized by uncommeting the loaded seed, but we provide the seeds that we used for reproducibility purposes (rnd_1.mat rnd_2.mat).
