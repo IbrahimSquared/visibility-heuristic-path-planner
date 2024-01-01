@@ -1,18 +1,21 @@
 #include "parser/ConfigParser.h"
 
 #include <fstream>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 namespace vbs {
 
-bool ConfigParser::parse(const std::string& filename) {
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+bool ConfigParser::parse(const std::string &filename) {
   std::ifstream file(filename);
   if (!file) {
     std::cerr << "Failed to open " << filename << '\n';
     return false;
   }
-  
+
   std::string line;
   while (std::getline(file, line)) {
     // Ignore comments and blank lines
@@ -183,7 +186,8 @@ bool ConfigParser::parse(const std::string& filename) {
     } else if (key == "visibilityThreshold") {
       try {
         config_.visibilityThreshold = std::stod(value);
-        if (config_.visibilityThreshold > 1.0 || config_.visibilityThreshold < 0.0) {
+        if (config_.visibilityThreshold > 1.0 ||
+            config_.visibilityThreshold < 0.0) {
           std::cerr << "Invalid value for " << key << ": " << value << '\n';
           std::cerr << "It must be a double between 0 and 1\n";
           return false;
@@ -291,45 +295,52 @@ bool ConfigParser::parse(const std::string& filename) {
   if (!config_.silent) {
     if (config_.mode == 1) {
       std::cout << "Random environment mode" << std::endl;
-      std::cout << "########################### Environment settings ########################## \n"
-        << "nrows: " << config_.nrows << "\n"
-        << "ncols: " << config_.ncols << "\n"
-        << "Nb of obstacles: " << config_.nb_of_obstacles << "\n"
-        << "Min width: " << config_.minWidth << "\n"
-        << "Max width: " << config_.maxWidth << "\n"
-        << "Min height: " << config_.minHeight << "\n"
-        << "Max height: " << config_.maxHeight << std::endl;
+      std::cout << "################### Environment settings "
+                   "################## \n"
+                << "nrows: " << config_.nrows << "\n"
+                << "ncols: " << config_.ncols << "\n"
+                << "Nb of obstacles: " << config_.nb_of_obstacles << "\n"
+                << "Min width: " << config_.minWidth << "\n"
+                << "Max width: " << config_.maxWidth << "\n"
+                << "Min height: " << config_.minHeight << "\n"
+                << "Max height: " << config_.maxHeight << std::endl;
       if (config_.randomSeed) {
         std::cout << "Random seed: " << config_.randomSeed << std::endl;
       } else {
         std::cout << "Fixed seed value: " << config_.seedValue << std::endl;
       }
     } else if (config_.mode == 2) {
-      std::cout << "Import image mode" << "\n"
-        << "Image path: " << config_.imagePath << std::endl;
+      std::cout << "Import image mode"
+                << "\n"
+                << "Image path: " << config_.imagePath << std::endl;
     }
-    std::cout << "############################ Solver settings ############################## \n"
-        << "Start point: " << config_.start.first << ", " << config_.start.second << "\n"
-        << "End point: " << config_.end.first << ", " << config_.end.second << "\n"
-        << "Maximum iterations: " << config_.max_iter << "\n"
-        << "Solver visibility threshold: " << config_.visibilityThreshold << "\n"
-        << "Light strength: " << config_.lightStrength << std::endl;
-    std::cout << "############################ Output settings ############################## \n"
-      << "timer: " << config_.timer << "\n"
-      << "saveLightSourceEnum: " << config_.saveCameFrom << "\n"
-      << "saveLightSources: " << config_.saveLightSources << "\n"
-      << "saveVisibilityField: " << config_.saveGlobalVisibility << "\n"
-      << "saveLocalVisibility: " << config_.saveLocalVisibility << "\n"
-      << "saveVisibilityMapEnv: " << config_.saveVisibilityField << std::endl;
+    std::cout << "#################### Solver settings "
+                 "###################### \n"
+              << "Start point: " << config_.start.first << ", "
+              << config_.start.second << "\n"
+              << "End point: " << config_.end.first << ", "
+              << config_.end.second << "\n"
+              << "Maximum iterations: " << config_.max_iter << "\n"
+              << "Solver visibility threshold: " << config_.visibilityThreshold
+              << "\n"
+              << "Light strength: " << config_.lightStrength << std::endl;
+    std::cout << "#################### Output settings "
+                 "###################### \n"
+              << "timer: " << config_.timer << "\n"
+              << "saveLightSourceEnum: " << config_.saveCameFrom << "\n"
+              << "saveLightSources: " << config_.saveLightSources << "\n"
+              << "saveVisibilityField: " << config_.saveGlobalVisibility << "\n"
+              << "saveLocalVisibility: " << config_.saveLocalVisibility << "\n"
+              << "saveVisibilityMapEnv: " << config_.saveVisibilityField
+              << std::endl;
   }
-  // Return true if we successfully parsed the config file
   return true;
 }
 
-/******************************************************************************************************/
-/******************************************************************************************************/
-/******************************************************************************************************/
-point ConfigParser::parsePairString(const std::string& str) {
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+point ConfigParser::parsePairString(const std::string &str) {
   point result;
   int n = sscanf(str.c_str(), "{%d,%d}", &result.first, &result.second);
   if (n != 2) {

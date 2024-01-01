@@ -2,7 +2,6 @@
 #define CONFIG_PARSER_H
 
 #include <string>
-#include <vector>
 
 namespace vbs {
 
@@ -40,14 +39,14 @@ struct Config {
 class ConfigParser {
 public:
   ConfigParser(){};
-  bool parse(const std::string& filename);
-  inline const Config& getConfig() const { return config_; };
+  bool parse(const std::string &filename);
+  inline const Config &getConfig() const { return config_; };
   // Deconstructor
   ~ConfigParser() = default;
 
 private:
-    Config config_;
-    point parsePairString(const std::string& str);
+  Config config_;
+  point parsePairString(const std::string &str);
 };
 
 } // namespace vbs

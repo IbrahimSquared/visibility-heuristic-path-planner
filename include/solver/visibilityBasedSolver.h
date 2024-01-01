@@ -4,32 +4,30 @@
 #include "environment/environment.h"
 
 #include <cmath>
-#include <algorithm>
-#include <vector>
 #include <queue>
+#include <vector>
 
 #include <SFML/Graphics.hpp>
 
 namespace vbs {
 
-// Node structure that is maintained by the heap: a double distance value for every x, y size_t values
+// Node structure that is maintained by the heap: a double distance value for
+// every x, y size_t values
 struct Node {
   size_t x, y;
   double h;
 
-  bool operator<(const Node& other) const {
-    return h > other.h;
-  }
+  bool operator<(const Node &other) const { return h > other.h; }
 };
 
 class visibilityBasedSolver {
- public:
+public:
   /*!
    * Constructor.
    * @brief Initialize the solver with an environment.
    * @param [in] env Environment reference.
    */
-  explicit visibilityBasedSolver(environment& env);
+  explicit visibilityBasedSolver(environment &env);
   // Deconstructor
   ~visibilityBasedSolver() = default;
 
@@ -39,35 +37,37 @@ class visibilityBasedSolver {
   // Solve
   void solve();
 
- private:
-
+private:
   void reset();
   std::shared_ptr<Field<double>> occupancyComplement_;
   std::unique_ptr<Field<double>> visibility_global_;
   std::unique_ptr<Field<double>> visibility_;
   std::unique_ptr<Field<size_t>> cameFrom_;
   std::unique_ptr<Field<bool>> isUpdated_;
-   
+
   std::unique_ptr<point[]> lightSources_;
 
   std::shared_ptr<Config> sharedConfig_;
 
   std::unique_ptr<sf::Image> uniqueLoadedImage_;
 
-  void reconstructPath(const Node& current, std::vector<point>& resultingPath);
-  
+  void reconstructPath(const Node &current, std::vector<point> &resultingPath);
+
   // Dimensions.
-  size_t ny_; size_t nx_;
+  size_t ny_;
+  size_t nx_;
 
   /*!
-   * @brief Currently a Euclidean measure of the distance but can be generalized.
+   * @brief Currently a Euclidean measure of the distance but can be
+   * generalized.
    * @param [in] source_x P1_x.
    * @param [in] source_y P1_y.
    * @param [in] target_x P2_x.
    * @param [in] target_y P2_y.
    */
-  inline double eval_d(int source_x, int source_y, int target_x, int target_y) { 
-    return sqrt((double)(source_x-target_x) * (source_x-target_x) + (source_y-target_y) * (source_y-target_y));
+  inline double eval_d(int source_x, int source_y, int target_x, int target_y) {
+    return sqrt((double)(source_x - target_x) * (source_x - target_x) +
+                (source_y - target_y) * (source_y - target_y));
   };
 
   // Reset queue
@@ -78,14 +78,15 @@ class visibilityBasedSolver {
 
   // Save results
   void saveResults();
-  void saveImageWithPath(const std::vector<point>& path);
+  void saveImageWithPath(const std::vector<point> &path);
 
   // Heap to maintain the heuristic
   std::unique_ptr<std::priority_queue<Node>> heap_;
 
   // Number of lightsources/pivots.
   size_t nb_of_sources_ = 0;
-  // Lightstrength, can be decreased. Can add later an alpha that has light decay, enforcing adding a new pivot periodically.
+  // Lightstrength, can be decreased. Can add later an alpha that has light
+  // decay, enforcing adding a new pivot periodically.
   const double lightStrength_ = 1.0;
   // Visibility threshold
   double visibilityThreshold_;
