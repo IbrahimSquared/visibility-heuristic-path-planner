@@ -3,11 +3,9 @@
 
 #include <iostream>
 
-using namespace vbs;
-
 int main() {
   // Parse settings
-  ConfigParser parser;
+  vbs::ConfigParser parser;
   if (!parser.parse("config/settings.config")) {
     std::cout << "################## Parsing results: ####"
                  "################# \n";
@@ -21,8 +19,8 @@ int main() {
   auto config = parser.getConfig();
 
   // Initialize environment
-  environment env = environment(config);
+  vbs::environment env = vbs::environment(config);
   // Initialize solver & solve
-  visibilityBasedSolver solver = visibilityBasedSolver(env);
+  vbs::visibilityBasedSolver solver = vbs::visibilityBasedSolver(env);
   solver.solve();
 }
