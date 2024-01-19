@@ -14,7 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 include_directories(include)
 # include_directories(C:/Workdir/Programs/msys64/mingw64/include) if needed
-add_executable(visibility_heuristic_planner src/main.cpp src/environment.cpp src/visibilityBasedSolver.cpp src/ConfigParser.cpp)
+add_executable(visibility_heuristic_planner src/main.cpp src/environment.cpp src/visibilityBasedSolver.cpp src/parser.cpp)
 
 # Find the SFML package
 find_package(SFML 2.5 COMPONENTS graphics REQUIRED)
