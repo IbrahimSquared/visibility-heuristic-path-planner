@@ -1,8 +1,8 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
-#include "environment/Field.h"
-#include "parser/ConfigParser.h"
+#include "environment/field.h"
+#include "parser/parser.h"
 
 #include <filesystem>
 #include <memory>
