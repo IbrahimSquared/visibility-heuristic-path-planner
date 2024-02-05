@@ -291,6 +291,10 @@ void visibilityBasedSolver::benchmarkSeries() {
 
   std::vector<double> ratios;
   ratios.reserve(60);
+  std::vector<double> times_visibility;
+  times_visibility.reserve(60);
+  std::vector<double> times_raycasting;
+  times_raycasting.reserve(60);
 
   for (int i = 50; i < 3000; i += 50) {
     visibility_->resize(i, i, 0.0);
@@ -327,6 +331,9 @@ void visibilityBasedSolver::benchmarkSeries() {
     std::cout << "Ratio. Proposed method is: "
               << (double)duration2.count() / duration.count()
               << " faster than typical raycasting." << std::endl;
+
+    times_visibility.push_back(duration.count());
+    times_raycasting.push_back(duration2.count());
     ratios.push_back((double)duration2.count() / duration.count());
   }
 
@@ -338,27 +345,11 @@ void visibilityBasedSolver::benchmarkSeries() {
     std::cout << r << std::endl;
   }
 
-  // save ratios in a .txt file
-  std::ofstream file("output/ratios.txt");
-  if (file.is_open()) {
-    for (auto &r : ratios) {
-      file << r << std::endl;
-    }
-    file.close();
+  std::ofstream file("output/benchmark_results.txt");
+  for (size_t i = 0; i < ratios.size(); ++i) {
+    file << times_visibility[i] << " " << times_raycasting[i] << " "
+         << ratios[i] << std::endl;
   }
-
-  // if (!sharedConfig_->silent) {
-  //   std::cout << "############################## Solver output "
-  //                "##############################"
-  //             << "\n"
-  //             << "Visibility computation time in us: " << duration.count()
-  //             << "us" << std::endl;
-  //   std::cout << "Raycasting computation time in us: " << duration2.count()
-  //             << "us" << std::endl;
-  //   std::cout << "Ratio. Proposed method is: "
-  //             << (double)duration2.count() / duration.count()
-  //             << " faster than typical raycasting." << std::endl;
-  // }
 }
 
 /*****************************************************************************/
