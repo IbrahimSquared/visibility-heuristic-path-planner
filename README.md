@@ -3,6 +3,9 @@ This repository contains an implementation of the algorithms provided in the pap
 Provides a linear complexity & highly efficient 2D visibility solution, based on a linear first order hyperbolic partial differential equation. The algorithm functions in a dynamic-programming approach. For example, a 101x101 grid can be processed at ~20kHz in C++ on an i7-9750h processor. <br>
 Code developed for C++20.
 
+C++ code by default now computes standalone visibility for random environments and plots them using SFML using two methods: proposed and raycasting.
+Benchmarks show that proposed method runs 12.5 times faster than raycasting for a $1000\times{}1000$ gridmap.
+
 ## Visibility
 Two sample visibility polygons produced using b_visibility_shapes.m <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5.jpg) <br>
@@ -13,6 +16,9 @@ Binary visibility polygon <br>
 
 ## Standalone Visibility Computation for a Sample Random Environment (SFML C++)
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/SFMLstandAloneVisibility.png) <br>
+
+## Standalone Visibility Computation for a Sample Random Environment Using Raycasting (SFML C++)
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/SFMLrayCastingVisibility.png) <br>
 
 ## Visibility Heuristic Path Planner
 Sample solutions provided in the paper: <br>
