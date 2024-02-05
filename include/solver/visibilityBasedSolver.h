@@ -48,9 +48,17 @@ public:
 
   /*!
    * @brief Benchmark by comparing the visibility computation
-   * against raycasting.
+   * against raycasting for one environment that has settings
+   * in the config file.
    */
   void benchmark();
+
+  /*!
+   * @brief Benchmark by comparing the visibility computation
+   * against raycasting for a series of environments of increasing
+   * size.
+   */
+  void benchmarkSeries();
 
   /*!
    * @brief Compute visibility using a typical raycasting algorithm. Enumerate
@@ -101,6 +109,9 @@ private:
 
   // visibility update
   void updateVisibility();
+
+  // Stand-alone visibility computation
+  void computeVisibility();
 
   // Save results
   void saveResults();
