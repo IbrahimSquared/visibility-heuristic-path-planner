@@ -25,6 +25,10 @@ Benchmarks show that proposed method runs 52 times faster than raycasting for a 
 ## Standalone Visibility Computation for a Sample Random Environment Using Raycasting (SFML C++)
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/SFMLrayCastingVisibility.png) <br>
 
+## Benchmark Results Comparing Compute Time to Ray-Casting
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/benchmarks.png) <br>
+![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/benchmarks_speedup.png) <br>
+
 ## Visibility Heuristic Path Planner
 ### Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
