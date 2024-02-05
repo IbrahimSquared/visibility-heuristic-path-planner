@@ -25,4 +25,5 @@ int main() {
   // solver.solve();
   // solver.standAloneVisibility();
   solver.benchmark();
+  // solver.benchmarkSeries();
 }

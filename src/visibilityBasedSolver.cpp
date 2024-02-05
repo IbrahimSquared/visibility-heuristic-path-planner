@@ -221,15 +221,12 @@ void visibilityBasedSolver::benchmark() {
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
   auto time_start = std::chrono::high_resolution_clock::now();
-  updateVisibility();
+  computeVisibility();
   auto time_stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       time_stop - time_start);
 
   saveStandAloneVisibility();
-
-  // visibilityRayCasting_->reset();
-  // raycasting(ls_.first, ls_.second, ls_.first, ls_.second - 200);
 
   auto time_start2 = std::chrono::high_resolution_clock::now();
   // Raycasting without timing
@@ -284,6 +281,84 @@ void visibilityBasedSolver::raycasting(int x0, int y0, int x1, int y1) {
       y0 += sy;
     }
   }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::benchmarkSeries() {
+  visibilityThreshold_ = sharedConfig_->visibilityThreshold;
+
+  std::vector<double> ratios;
+  ratios.reserve(60);
+
+  for (int i = 50; i < 3000; i += 50) {
+    visibility_->resize(i, i, 0.0);
+    visibilityRayCasting_->resize(i, i, 1.0);
+    occupancyComplement_->resize(i, i, 1.0);
+
+    ls_ = {i / 2, i / 2};
+    nx_ = i;
+    ny_ = i;
+
+    auto time_start = std::chrono::high_resolution_clock::now();
+    computeVisibility();
+    auto time_stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+        time_stop - time_start);
+
+    auto time_start2 = std::chrono::high_resolution_clock::now();
+    // Raycasting without timing
+    for (size_t k = 0; k < i; ++k) {
+      for (size_t j = 0; j < i; ++j) {
+        raycasting(ls_.first, ls_.second, k, j);
+      }
+    }
+    auto time_stop2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(
+        time_stop2 - time_start2);
+
+    std::cout << "***************************" << std::endl;
+    std::cout << "For grid size: " << i << "x" << i << std::endl;
+    std::cout << "Visibility computation time in us: " << duration.count()
+              << "us" << std::endl;
+    std::cout << "Raycasting computation time in us: " << duration2.count()
+              << "us" << std::endl;
+    std::cout << "Ratio. Proposed method is: "
+              << (double)duration2.count() / duration.count()
+              << " faster than typical raycasting." << std::endl;
+    ratios.push_back((double)duration2.count() / duration.count());
+  }
+
+  std::cout << "############################## Solver output "
+               "##############################"
+            << "\n"
+            << "Ratios: " << std::endl;
+  for (auto &r : ratios) {
+    std::cout << r << std::endl;
+  }
+
+  // save ratios in a .txt file
+  std::ofstream file("output/ratios.txt");
+  if (file.is_open()) {
+    for (auto &r : ratios) {
+      file << r << std::endl;
+    }
+    file.close();
+  }
+
+  // if (!sharedConfig_->silent) {
+  //   std::cout << "############################## Solver output "
+  //                "##############################"
+  //             << "\n"
+  //             << "Visibility computation time in us: " << duration.count()
+  //             << "us" << std::endl;
+  //   std::cout << "Raycasting computation time in us: " << duration2.count()
+  //             << "us" << std::endl;
+  //   std::cout << "Ratio. Proposed method is: "
+  //             << (double)duration2.count() / duration.count()
+  //             << " faster than typical raycasting." << std::endl;
+  // }
 }
 
 /*****************************************************************************/
@@ -477,6 +552,139 @@ void visibilityBasedSolver::updateVisibility() {
              eval_d(currentX, currentY, parent.first, parent.second));
         heap_->push(Node{currentX, currentY, h});
       }
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::computeVisibility() {
+  size_t currentX, currentY;
+  double v = 0.0;
+  double h;
+  point parent;
+  double offset = 1.0;
+
+  // Q1
+  max_x_ = nx_ - ls_.first;
+  max_y_ = ny_ - ls_.second;
+
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first + i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second + j;
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_->get(currentX, currentY - 1);
+      } else if (j == 0) {
+        v = visibility_->get(currentX - 1, currentY);
+      } else if (i > j) {
+        c_ = (double)(currentY - ls_.second + offset) /
+             (currentX - ls_.first + offset);
+        v = visibility_->get(currentX - 1, currentY) -
+            c_ * (visibility_->get(currentX - 1, currentY) -
+                  visibility_->get(currentX - 1, currentY - 1));
+      } else if (j > i) {
+        c_ = (double)(currentX - ls_.first + offset) /
+             (currentY - ls_.second + offset);
+        v = visibility_->get(currentX, currentY - 1) -
+            c_ * (visibility_->get(currentX, currentY - 1) -
+                  visibility_->get(currentX - 1, currentY - 1));
+      }
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_->set(currentX, currentY, v);
+    }
+  }
+  // Q2
+  max_x_ = ls_.first;
+  max_y_ = ny_ - ls_.second;
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first - i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second + j;
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_->get(currentX, currentY - 1);
+      } else if (j == 0) {
+        v = visibility_->get(currentX + 1, currentY);
+      } else if (i > j) {
+        c_ = (double)(currentY - ls_.second + offset) /
+             (ls_.first - currentX + offset);
+        v = visibility_->get(currentX + 1, currentY) -
+            c_ * (visibility_->get(currentX + 1, currentY) -
+                  visibility_->get(currentX + 1, currentY - 1));
+      } else if (j > i) {
+        c_ = (double)(ls_.first - currentX + offset) /
+             (currentY - ls_.second + offset);
+        v = visibility_->get(currentX, currentY - 1) -
+            c_ * (visibility_->get(currentX, currentY - 1) -
+                  visibility_->get(currentX + 1, currentY - 1));
+      }
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_->set(currentX, currentY, v);
+    }
+  }
+  // Q3
+  max_x_ = ls_.first;
+  max_y_ = ls_.second;
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first - i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second - j;
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_->get(currentX, currentY + 1);
+      } else if (j == 0) {
+        v = visibility_->get(currentX + 1, currentY);
+      } else if (i > j) {
+        c_ = (double)(ls_.second - currentY + offset) /
+             (ls_.first - currentX + offset);
+        v = visibility_->get(currentX + 1, currentY) -
+            c_ * (visibility_->get(currentX + 1, currentY) -
+                  visibility_->get(currentX + 1, currentY + 1));
+      } else if (j > i) {
+        c_ = (double)(ls_.first - currentX + offset) /
+             (ls_.second - currentY + offset);
+        v = visibility_->get(currentX, currentY + 1) -
+            c_ * (visibility_->get(currentX, currentY + 1) -
+                  visibility_->get(currentX + 1, currentY + 1));
+      }
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_->set(currentX, currentY, v);
+    }
+  }
+  // Q4
+  max_x_ = nx_ - ls_.first;
+  max_y_ = ls_.second;
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first + i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second - j;
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_->get(currentX, currentY + 1);
+      } else if (j == 0) {
+        v = visibility_->get(currentX - 1, currentY);
+      } else if (i > j) {
+        c_ = (double)(ls_.second - currentY + offset) /
+             (currentX - ls_.first + offset);
+        v = visibility_->get(currentX - 1, currentY) -
+            c_ * (visibility_->get(currentX - 1, currentY) -
+                  visibility_->get(currentX - 1, currentY + 1));
+      } else if (j > i) {
+        c_ = (double)(currentX - ls_.first + offset) /
+             (ls_.second - currentY + offset);
+        v = visibility_->get(currentX, currentY + 1) -
+            c_ * (visibility_->get(currentX, currentY + 1) -
+                  visibility_->get(currentX - 1, currentY + 1));
+      }
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_->set(currentX, currentY, v);
     }
   }
 }
