@@ -8,7 +8,7 @@ Two sample visibility polygons produced using b_visibility_shapes.m <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5.jpg) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/many_small_obstacles_3.jpg) <br>
 
-Thresholded visibility polygon <br>
+Binary visibility polygon <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/visibility_polygon_5_threshold.jpg) <br>
 
 ## Standalone Visibility Computation for a Sample Random Environment (SFML C++)
