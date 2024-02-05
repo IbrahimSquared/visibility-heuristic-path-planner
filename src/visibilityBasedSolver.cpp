@@ -291,7 +291,7 @@ void visibilityBasedSolver::benchmarkSeries() {
 
   const int num_points = 60;
   const double start_value = 50;
-  const double end_value = 3000;
+  const double end_value = 5000;
 
   std::vector<double> ratios;
   std::vector<double> times_visibility;
