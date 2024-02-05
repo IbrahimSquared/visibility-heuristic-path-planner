@@ -4,7 +4,7 @@ Provides a linear complexity & highly efficient 2D visibility solution, based on
 Code developed for C++20.
 
 C++ code by default now computes standalone visibility for random environments and plots them using SFML using two methods: proposed and raycasting.
-Benchmarks show that proposed method runs 12.5 times faster than raycasting for a $1000\times{}1000$ gridmap.
+Benchmarks show that proposed method runs 34.5 times faster than raycasting for a $1000\times{}1000$ gridmap.
 
 ## Visibility
 ### Two sample visibility polygons produced using b_visibility_shapes.m <br>
