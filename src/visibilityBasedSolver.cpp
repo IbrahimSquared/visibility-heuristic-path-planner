@@ -289,14 +289,28 @@ void visibilityBasedSolver::raycasting(int x0, int y0, int x1, int y1) {
 void visibilityBasedSolver::benchmarkSeries() {
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
-  std::vector<double> ratios;
-  ratios.reserve(60);
-  std::vector<double> times_visibility;
-  times_visibility.reserve(60);
-  std::vector<double> times_raycasting;
-  times_raycasting.reserve(60);
+  const int num_points = 60;
+  const double start_value = 50;
+  const double end_value = 3000;
 
-  for (int i = 50; i < 3000; i += 50) {
+  std::vector<double> ratios;
+  std::vector<double> times_visibility;
+  std::vector<double> times_raycasting;
+  ratios.reserve(num_points);
+  times_visibility.reserve(num_points);
+  times_raycasting.reserve(num_points);
+
+  std::vector<int> logarithmic_points;
+  logarithmic_points.reserve(num_points);
+  for (int i = 0; i < num_points; ++i) {
+    double log_space = start_value * exp((log(end_value / start_value) * i) /
+                                         (num_points - 1));
+    logarithmic_points.push_back(round(log_space));
+  }
+
+  for (int iter = 0; iter < num_points; ++iter) {
+    int i = logarithmic_points[iter];
+
     visibility_->resize(i, i, 0.0);
     visibilityRayCasting_->resize(i, i, 1.0);
     occupancyComplement_->resize(i, i, 1.0);
