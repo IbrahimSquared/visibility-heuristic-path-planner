@@ -21,7 +21,7 @@ Benchmarks show that proposed method runs 12.5 times faster than raycasting for 
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/SFMLrayCastingVisibility.png) <br>
 
 ## Visibility Heuristic Path Planner
-Sample solutions provided in the paper: <br>
+### Sample solutions provided in the paper: <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/step_6.jpg) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_0.png) <br>
 ![alt text](https://github.com/IbrahimSquared/visibility-heuristic-path-planner/blob/main/Samples/maze_sol_1.png) <br>
