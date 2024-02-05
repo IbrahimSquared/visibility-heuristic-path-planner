@@ -37,6 +37,12 @@ public:
   // Solve
   void solve();
 
+  // Compute standAloneVisibility
+  void standAloneVisibility();
+
+  // save standAloneVisibility results
+  void saveStandAloneVisibility();
+
 private:
   void reset();
   std::shared_ptr<Field<double>> occupancyComplement_;

@@ -165,6 +165,36 @@ void visibilityBasedSolver::solve() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+void visibilityBasedSolver::standAloneVisibility() {
+  // Init
+  auto start = sharedConfig_->start;
+
+  // check if start and end are valid
+  if (start.first < 0 || start.first >= nx_ || start.second < 0 ||
+      start.second >= ny_) {
+    std::cout << "############################## Solver output "
+                 "##############################"
+              << std::endl;
+    std::cout << "Start point is out of bounds." << std::endl;
+    return;
+  }
+  if (occupancyComplement_->get(start.first, start.second) == 0) {
+    std::cout << "############################## Solver output "
+                 "##############################"
+              << std::endl;
+    std::cout << "Start point is not valid (occupied)" << std::endl;
+    return;
+  }
+
+  ls_ = start;
+  visibilityThreshold_ = sharedConfig_->visibilityThreshold;
+  updateVisibility();
+  saveStandAloneVisibility();
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
 void visibilityBasedSolver::updateVisibility() {
   size_t currentX, currentY;
   double v = 0.0;
@@ -357,6 +387,68 @@ void visibilityBasedSolver::updateVisibility() {
   }
 }
 
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::saveStandAloneVisibility() {
+  sf::Image image;
+  image = *uniqueLoadedImage_;
+  sf::Color color;
+  color.a = 1;
+
+  for (size_t j = ny_ - 1; j > 0; --j) {
+    for (size_t i = 0; i < nx_; ++i) {
+      image.setPixel(i, ny_ - 1 - j,
+                     sf::Color(255 * visibility_global_->get(i, j),
+                               255 * visibility_global_->get(i, j),
+                               255 * visibility_global_->get(i, j)));
+      // use this for binary visibility
+      // if (visibility_->get(i, j) < visibilityThreshold_) {
+      //   image.setPixel(i, ny_ - 1 - j, color.Black);
+      // } else {
+      //   image.setPixel(i, ny_ - 1 - j, color.White);
+      // }
+    }
+  }
+
+  // set ls_ as yellow ball
+  const int ballRadius = sharedConfig_->ballRadius;
+  int x0 = ls_.first;
+  int y0 = ny_ - 1 - ls_.second;
+  for (int j = -ballRadius; j <= ballRadius; ++j) {
+    for (int k = -ballRadius; k <= ballRadius; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j * j + k * k <= ballRadius * ballRadius) {
+          image.setPixel(x0 + j, y0 + k, color.Yellow);
+        }
+      }
+    }
+  }
+
+  // add black ring around the yellow ball
+  for (int j = -ballRadius - 1; j <= ballRadius + 1; ++j) {
+    for (int k = -ballRadius - 1; k <= ballRadius + 1; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j * j + k * k > ballRadius * ballRadius &&
+            j * j + k * k <= (ballRadius + 1) * (ballRadius + 1)) {
+          image.setPixel(x0 + j, y0 + k, color.Black);
+        }
+      }
+    }
+  }
+
+  // set occupied cells as red
+  for (size_t j = ny_ - 1; j > 0; --j) {
+    for (size_t i = 0; i < nx_; ++i) {
+      if (occupancyComplement_->get(i, j) == 0) {
+        image.setPixel(i, ny_ - 1 - j, color.Red);
+      }
+    }
+  }
+
+  const std::string imageName = "output/standAloneVisibility.png";
+  image.saveToFile(imageName);
+}
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
