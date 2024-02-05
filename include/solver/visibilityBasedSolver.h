@@ -43,11 +43,31 @@ public:
   // save standAloneVisibility results
   void saveStandAloneVisibility();
 
+  // save standAloneVisibility results
+  void saveRayCastingVisibility();
+
+  /*!
+   * @brief Benchmark by comparing the visibility computation
+   * against raycasting.
+   */
+  void benchmark();
+
+  /*!
+   * @brief Compute visibility using a typical raycasting algorithm. Enumerate
+   * in a map the number of times each cell is traveresed.
+   * @param [in] x0 Start x.
+   * @param [in] y0 Start y.
+   * @param [in] x1 End x.
+   * @param [in] y1 End y.
+   */
+  void raycasting(int x0, int y0, int x1, int y1);
+
 private:
   void reset();
   std::shared_ptr<Field<double>> occupancyComplement_;
   std::unique_ptr<Field<double>> visibility_global_;
   std::unique_ptr<Field<double>> visibility_;
+  std::unique_ptr<Field<double>> visibilityRayCasting_;
   std::unique_ptr<Field<size_t>> cameFrom_;
   std::unique_ptr<Field<bool>> isUpdated_;
 

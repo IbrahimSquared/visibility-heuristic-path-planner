@@ -23,5 +23,6 @@ int main() {
   // Initialize solver & solve
   vbs::visibilityBasedSolver solver = vbs::visibilityBasedSolver(env);
   // solver.solve();
-  solver.standAloneVisibility();
+  // solver.standAloneVisibility();
+  solver.benchmark();
 }

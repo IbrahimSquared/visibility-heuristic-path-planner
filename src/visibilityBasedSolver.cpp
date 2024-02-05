@@ -43,6 +43,7 @@ visibilityBasedSolver::visibilityBasedSolver(environment &env)
 void visibilityBasedSolver::reset() {
   visibility_global_ = std::make_unique<Field<double>>(nx_, ny_, 0.0);
   visibility_ = std::make_unique<Field<double>>(nx_, ny_, 0.0);
+  visibilityRayCasting_ = std::make_unique<Field<double>>(nx_, ny_, 1.0);
   cameFrom_ = std::make_unique<Field<size_t>>(nx_, ny_, 1e15);
 
   lightSources_.reset(new point[nx_ * ny_]);
@@ -190,6 +191,99 @@ void visibilityBasedSolver::standAloneVisibility() {
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
   updateVisibility();
   saveStandAloneVisibility();
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::benchmark() {
+  // Init
+  auto start = sharedConfig_->start;
+
+  // check if start and end are valid
+  if (start.first < 0 || start.first >= nx_ || start.second < 0 ||
+      start.second >= ny_) {
+    std::cout << "############################## Solver output "
+                 "##############################"
+              << std::endl;
+    std::cout << "Start point is out of bounds." << std::endl;
+    return;
+  }
+  if (occupancyComplement_->get(start.first, start.second) == 0) {
+    std::cout << "############################## Solver output "
+                 "##############################"
+              << std::endl;
+    std::cout << "Start point is not valid (occupied)" << std::endl;
+    return;
+  }
+
+  ls_ = start;
+  visibilityThreshold_ = sharedConfig_->visibilityThreshold;
+
+  auto time_start = std::chrono::high_resolution_clock::now();
+  updateVisibility();
+  auto time_stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      time_stop - time_start);
+
+  saveStandAloneVisibility();
+
+  // visibilityRayCasting_->reset();
+  // raycasting(ls_.first, ls_.second, ls_.first, ls_.second - 200);
+
+  auto time_start2 = std::chrono::high_resolution_clock::now();
+  // Raycasting without timing
+  for (size_t i = 0; i < nx_; ++i) {
+    for (size_t j = 0; j < ny_; ++j) {
+      raycasting(ls_.first, ls_.second, i, j);
+    }
+  }
+  auto time_stop2 = std::chrono::high_resolution_clock::now();
+  auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(
+      time_stop2 - time_start2);
+
+  saveRayCastingVisibility();
+
+  if (!sharedConfig_->silent) {
+    std::cout << "############################## Solver output "
+                 "##############################"
+              << "\n"
+              << "Visibility computation time in us: " << duration.count()
+              << "us" << std::endl;
+    std::cout << "Raycasting computation time in us: " << duration2.count()
+              << "us" << std::endl;
+    std::cout << "Ratio. Proposed method is: "
+              << (double)duration2.count() / duration.count()
+              << " faster than typical raycasting." << std::endl;
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::raycasting(int x0, int y0, int x1, int y1) {
+  int dx = std::abs(x1 - x0);
+  int dy = std::abs(y1 - y0);
+  int sx = (x0 < x1) ? 1 : -1;
+  int sy = (y0 < y1) ? 1 : -1;
+  int err = dx - dy;
+
+  while (x0 != x1 || y0 != y1) {
+    if (occupancyComplement_->get(x0, y0) == 0) {
+      visibilityRayCasting_->set(x0, y0, 0);
+      visibilityRayCasting_->set(x1, y1, 0);
+      return;
+    }
+    int e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
 }
 
 /*****************************************************************************/
@@ -399,9 +493,9 @@ void visibilityBasedSolver::saveStandAloneVisibility() {
   for (size_t j = ny_ - 1; j > 0; --j) {
     for (size_t i = 0; i < nx_; ++i) {
       image.setPixel(i, ny_ - 1 - j,
-                     sf::Color(255 * visibility_global_->get(i, j),
-                               255 * visibility_global_->get(i, j),
-                               255 * visibility_global_->get(i, j)));
+                     sf::Color(255 * visibility_->get(i, j),
+                               255 * visibility_->get(i, j),
+                               255 * visibility_->get(i, j)));
       // use this for binary visibility
       // if (visibility_->get(i, j) < visibilityThreshold_) {
       //   image.setPixel(i, ny_ - 1 - j, color.Black);
@@ -449,6 +543,69 @@ void visibilityBasedSolver::saveStandAloneVisibility() {
   const std::string imageName = "output/standAloneVisibility.png";
   image.saveToFile(imageName);
 }
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::saveRayCastingVisibility() {
+  sf::Image image;
+  image = *uniqueLoadedImage_;
+  sf::Color color;
+  color.a = 1;
+
+  for (size_t j = ny_ - 1; j > 0; --j) {
+    for (size_t i = 0; i < nx_; ++i) {
+      image.setPixel(i, ny_ - 1 - j,
+                     sf::Color(255 * visibilityRayCasting_->get(i, j),
+                               255 * visibilityRayCasting_->get(i, j),
+                               255 * visibilityRayCasting_->get(i, j)));
+      // use this for binary visibility
+      // if (visibilityRayCasting_->get(i, j) < visibilityThreshold_) {
+      //   image.setPixel(i, ny_ - 1 - j, color.Black);
+      // } else {
+      //   image.setPixel(i, ny_ - 1 - j, color.White);
+      // }
+    }
+  }
+  // set ls_ as yellow ball
+  const int ballRadius = sharedConfig_->ballRadius;
+  int x0 = ls_.first;
+  int y0 = ny_ - 1 - ls_.second;
+  for (int j = -ballRadius; j <= ballRadius; ++j) {
+    for (int k = -ballRadius; k <= ballRadius; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j * j + k * k <= ballRadius * ballRadius) {
+          image.setPixel(x0 + j, y0 + k, color.Yellow);
+        }
+      }
+    }
+  }
+
+  // add black ring around the yellow ball
+  for (int j = -ballRadius - 1; j <= ballRadius + 1; ++j) {
+    for (int k = -ballRadius - 1; k <= ballRadius + 1; ++k) {
+      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (j * j + k * k > ballRadius * ballRadius &&
+            j * j + k * k <= (ballRadius + 1) * (ballRadius + 1)) {
+          image.setPixel(x0 + j, y0 + k, color.Black);
+        }
+      }
+    }
+  }
+
+  // set occupied cells as red
+  for (size_t j = ny_ - 1; j > 0; --j) {
+    for (size_t i = 0; i < nx_; ++i) {
+      if (occupancyComplement_->get(i, j) == 0) {
+        image.setPixel(i, ny_ - 1 - j, color.Red);
+      }
+    }
+  }
+
+  const std::string imageName = "output/rayCastingVisibility.png";
+  image.saveToFile(imageName);
+}
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
