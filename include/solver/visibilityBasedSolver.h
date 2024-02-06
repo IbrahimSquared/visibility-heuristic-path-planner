@@ -112,6 +112,7 @@ private:
 
   // Stand-alone visibility computation
   void computeVisibility();
+  void computeVisibilityUsingQueue();
 
   // Save results
   void saveResults();

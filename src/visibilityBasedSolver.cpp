@@ -221,7 +221,8 @@ void visibilityBasedSolver::benchmark() {
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
   auto time_start = std::chrono::high_resolution_clock::now();
-  computeVisibility();
+  // computeVisibility();
+  computeVisibilityUsingQueue();
   auto time_stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       time_stop - time_start);
@@ -253,6 +254,17 @@ void visibilityBasedSolver::benchmark() {
               << (double)duration2.count() / duration.count()
               << " faster than typical raycasting." << std::endl;
   }
+
+  int count = 0;
+  for (size_t i = 0; i < nx_; ++i) {
+    for (size_t j = 0; j < ny_; ++j) {
+      if (occupancyComplement_->get(i, j) == 0) {
+        ++count;
+      }
+    }
+  }
+  std::cout << "Density of the occupancy grid: "
+            << (double)count / (nx_ * ny_) * 100 << "%" << std::endl;
 }
 
 /*****************************************************************************/
@@ -567,7 +579,6 @@ void visibilityBasedSolver::updateVisibility() {
 void visibilityBasedSolver::computeVisibility() {
   size_t currentX, currentY;
   double v = 0.0;
-  double h;
   point parent;
   double offset = 1.0;
 
@@ -690,6 +701,205 @@ void visibilityBasedSolver::computeVisibility() {
       }
       v = v * occupancyComplement_->get(currentX, currentY);
       visibility_->set(currentX, currentY, v);
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::computeVisibilityUsingQueue() {
+  size_t currentX, currentY;
+  double v = 0.0;
+  point parent;
+  double offset = 1.0;
+
+  const size_t ls_x = ls_.first;
+  const size_t ls_y = ls_.second;
+
+  visibility_->set(ls_x, ls_y, lightStrength_);
+  std::queue<point> q;
+  q.push({ls_x + 1, ls_y});
+  q.push({ls_x, ls_y + 1});
+  q.push({ls_x - 1, ls_y});
+  q.push({ls_x, ls_y - 1});
+  q.push({ls_x + 1, ls_y + 1});
+  q.push({ls_x - 1, ls_y + 1});
+  q.push({ls_x - 1, ls_y - 1});
+  q.push({ls_x + 1, ls_y - 1});
+
+  Field<bool> visited(nx_, ny_, false);
+
+  while (q.size() > 0) {
+    parent = q.front();
+    const size_t x = parent.first;
+    const size_t y = parent.second;
+    q.pop();
+    if (x < 0 || x >= nx_ || y < 0 || y >= ny_) {
+      continue;
+    }
+    if (visited.get(x, y)) {
+      continue;
+    }
+    if (occupancyComplement_->get(x, y) == 0) {
+      continue;
+    }
+
+    const int dx = x - ls_x;
+    const int dy = y - ls_y;
+
+    if (dx >= 0 && dy >= 0) {
+      if (dx == 0) {
+        v = visibility_->get(x, y - 1);
+        if (v > 0.001) {
+          q.push({x, y + 1});
+        }
+      } else if (dy == 0) {
+        v = visibility_->get(x - 1, y);
+        if (v > 0.001) {
+          q.push({x + 1, y});
+        }
+      } else if (dx == dy) {
+        v = visibility_->get(x - 1, y - 1);
+        if (v > 0.001) {
+          q.push({x, y + 1});
+          q.push({x + 1, y});
+          q.push({x + 1, y + 1});
+        }
+      } else if (dx > dy) {
+        c_ = (double)(dy) / (dx);
+        v = visibility_->get(x - 1, y) -
+            c_ * (visibility_->get(x - 1, y) - visibility_->get(x - 1, y - 1));
+        if (v > 0.001) {
+          q.push({x, y + 1});
+          q.push({x + 1, y});
+        }
+      } else if (dy > dx) {
+        c_ = (double)(dx) / (dy);
+        v = visibility_->get(x, y - 1) -
+            c_ * (visibility_->get(x, y - 1) - visibility_->get(x - 1, y - 1));
+        if (v > 0.001) {
+          q.push({x + 1, y});
+          q.push({x, y + 1});
+        }
+      }
+      v = v * occupancyComplement_->get(x, y);
+      visibility_->set(x, y, v);
+      visited.set(x, y, true);
+    } else if (dx < 0 && dy >= 0) {
+      if (dx == 0) {
+        v = visibility_->get(x, y - 1);
+        if (v > 0.001) {
+          q.push({x, y + 1});
+        }
+      } else if (dy == 0) {
+        v = visibility_->get(x + 1, y);
+        if (v > 0.001) {
+          q.push({x - 1, y});
+        }
+      } else if (-dx == dy) {
+        v = visibility_->get(x + 1, y - 1);
+        if (v > 0.001) {
+          q.push({x, y + 1});
+          q.push({x - 1, y});
+          q.push({x - 1, y + 1});
+        }
+      } else if (-dx > dy) {
+        c_ = (double)(dy) / (-dx);
+        v = visibility_->get(x + 1, y) -
+            c_ * (visibility_->get(x + 1, y) - visibility_->get(x + 1, y - 1));
+        if (v > 0.001) {
+          q.push({x, y + 1});
+          q.push({x - 1, y});
+        }
+      } else if (dy > -dx) {
+        c_ = (double)(-dx) / (dy);
+        v = visibility_->get(x, y - 1) -
+            c_ * (visibility_->get(x, y - 1) - visibility_->get(x + 1, y - 1));
+        if (v > 0.001) {
+          q.push({x - 1, y});
+          q.push({x, y + 1});
+        }
+      }
+      v = v * occupancyComplement_->get(x, y);
+      visibility_->set(x, y, v);
+      visited.set(x, y, true);
+    } else if (dx < 0 && dy < 0) {
+      if (dx == 0) {
+        v = visibility_->get(x, y + 1);
+        if (v > 0.001) {
+          q.push({x, y - 1});
+        }
+      } else if (dy == 0) {
+        v = visibility_->get(x + 1, y);
+        if (v > 0.001) {
+          q.push({x - 1, y});
+        }
+      } else if (dx == dy) {
+        v = visibility_->get(x + 1, y + 1);
+        if (v > 0.001) {
+          q.push({x, y - 1});
+          q.push({x - 1, y});
+          q.push({x - 1, y - 1});
+        }
+      } else if (-dx > -dy) {
+        c_ = (double)(dy) / (dx);
+        v = visibility_->get(x + 1, y) -
+            c_ * (visibility_->get(x + 1, y) - visibility_->get(x + 1, y + 1));
+        if (v > 0.001) {
+          q.push({x, y - 1});
+          q.push({x - 1, y});
+        }
+      } else if (-dy > -dx) {
+        c_ = (double)(dx) / (dy);
+        v = visibility_->get(x, y + 1) -
+            c_ * (visibility_->get(x, y + 1) - visibility_->get(x + 1, y + 1));
+        if (v > 0.001) {
+          q.push({x - 1, y});
+          q.push({x, y - 1});
+        }
+      }
+      v = v * occupancyComplement_->get(x, y);
+      visibility_->set(x, y, v);
+      visited.set(x, y, true);
+    } else if (dx >= 0 && dy < 0) {
+      if (dx == 0) {
+        v = visibility_->get(x, y + 1);
+        if (v > 0.001) {
+          q.push({x, y - 1});
+        }
+      } else if (dy == 0) {
+        v = visibility_->get(x - 1, y);
+        if (v > 0.001) {
+          q.push({x + 1, y});
+        }
+      } else if (dx == -dy) {
+        v = visibility_->get(x - 1, y + 1);
+        if (v > 0.001) {
+          q.push({x, y - 1});
+          q.push({x + 1, y});
+          q.push({x + 1, y - 1});
+        }
+      } else if (dx > -dy) {
+        c_ = (double)(-dy) / (dx);
+        v = visibility_->get(x - 1, y) -
+            c_ * (visibility_->get(x - 1, y) - visibility_->get(x - 1, y + 1));
+        if (v > 0.001) {
+          q.push({x, y - 1});
+          q.push({x + 1, y});
+        }
+      } else if (-dy > dx) {
+        c_ = (double)(dx) / (-dy);
+        v = visibility_->get(x, y + 1) -
+            c_ * (visibility_->get(x, y + 1) - visibility_->get(x - 1, y + 1));
+        if (v > 0.001) {
+          q.push({x + 1, y});
+          q.push({x, y - 1});
+        }
+      }
+      v = v * occupancyComplement_->get(x, y);
+      visibility_->set(x, y, v);
+      visited.set(x, y, true);
     }
   }
 }
