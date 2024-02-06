@@ -110,8 +110,14 @@ private:
   // visibility update
   void updateVisibility();
 
-  // Stand-alone visibility computation
+  // Stand-alone visibility computation (Algorithm 1 in the paper). More
+  // suitable for sparse environments.
   void computeVisibility();
+
+  /*!
+   * @brief Stand-alone visibility computation using a queue. It has termination
+   * conditions. generalized. More suitable for denser environments.
+   */
   void computeVisibilityUsingQueue();
 
   // Save results
