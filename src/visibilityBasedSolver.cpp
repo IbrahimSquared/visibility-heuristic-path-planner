@@ -579,8 +579,7 @@ void visibilityBasedSolver::updateVisibility() {
 void visibilityBasedSolver::computeVisibility() {
   size_t currentX, currentY;
   double v = 0.0;
-  point parent;
-  double offset = 1.0;
+  double offset = 0.0;
 
   // Q1
   max_x_ = nx_ - ls_.first;
@@ -711,7 +710,7 @@ void visibilityBasedSolver::computeVisibility() {
 void visibilityBasedSolver::computeVisibilityUsingQueue() {
   size_t currentX, currentY;
   double v = 0.0;
-  point parent;
+  point current;
   double offset = 1.0;
 
   const size_t ls_x = ls_.first;
@@ -731,9 +730,9 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
   Field<bool> visited(nx_, ny_, false);
 
   while (q.size() > 0) {
-    parent = q.front();
-    const size_t x = parent.first;
-    const size_t y = parent.second;
+    current = q.front();
+    const size_t x = current.first;
+    const size_t y = current.second;
     q.pop();
     if (x < 0 || x >= nx_ || y < 0 || y >= ny_) {
       continue;
