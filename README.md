@@ -9,7 +9,7 @@ For example, a 101x101 grid can be processed at ~55kHz in C++ on an i9-13980HX p
 Code developed for C++20.
 
 C++ code by default now computes standalone visibility for random environments and plots them using SFML using two methods: proposed and raycasting.
-Benchmarks show that proposed method runs 60 times faster than raycasting for a $1000\times{}1000$ gridmap.
+Benchmarks show that proposed method runs ~80 times faster than raycasting for an empty $1000\times{}1000$ gridmap.
 
 ## Visibility
 ### Two sample visibility polygons produced using b_visibility_shapes.m <br>
