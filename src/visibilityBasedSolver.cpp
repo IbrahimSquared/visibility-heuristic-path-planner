@@ -221,8 +221,8 @@ void visibilityBasedSolver::benchmark() {
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
   auto time_start = std::chrono::high_resolution_clock::now();
-  // computeVisibility();
-  computeVisibilityUsingQueue();
+  computeVisibility();
+  // computeVisibilityUsingQueue();
   auto time_stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       time_stop - time_start);
