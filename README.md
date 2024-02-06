@@ -5,7 +5,7 @@ Provides a linear complexity & highly efficient 2D visibility solution, based on
 
 The algorithm functions in a dynamic-programming approach. 
 
-For example, a 101x101 grid can be processed at ~50kHz in C++ on an i9-13980HX processor. <br>
+For example, a 101x101 grid can be processed at ~55kHz in C++ on an i9-13980HX processor. <br>
 Code developed for C++20.
 
 C++ code by default now computes standalone visibility for random environments and plots them using SFML using two methods: proposed and raycasting.
