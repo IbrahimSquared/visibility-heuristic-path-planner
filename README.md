@@ -78,6 +78,8 @@ Bottom left corner is the origin. <br>
 This is relevant for selecting start/end points. This standard can ofcourse be changed.
 
 ## To build or compile using cmake in Linux
+Required: <br>
+``` sudo apt-get install libsfml-dev ``` <br>
 Set compiler path (or comment that part), make sure SFML libraries are installed, then: <br>
 ``` mkdir build && cd build ``` <br>
 ``` cmake .. ``` <br>
