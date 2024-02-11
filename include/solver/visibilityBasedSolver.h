@@ -73,11 +73,11 @@ public:
 private:
   void reset();
   std::shared_ptr<Field<double>> occupancyComplement_;
-  std::unique_ptr<Field<double>> visibility_global_;
-  std::unique_ptr<Field<double>> visibility_;
-  std::unique_ptr<Field<double>> visibilityRayCasting_;
-  std::unique_ptr<Field<size_t>> cameFrom_;
-  std::unique_ptr<Field<bool>> isUpdated_;
+  Field<double> visibility_global_;
+  Field<double> visibility_;
+  Field<double> visibilityRayCasting_;
+  Field<size_t> cameFrom_;
+  Field<bool> isUpdated_;
 
   std::unique_ptr<point[]> lightSources_;
 
