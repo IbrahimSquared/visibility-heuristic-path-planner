@@ -374,7 +374,8 @@ void visibilityBasedSolver::benchmarkSeries() {
   std::ofstream file("output/benchmark_results.txt", std::ios::app);
   for (size_t i = 0; i < ratios.size(); ++i) {
     file << times_visibility[i] << " " << times_raycasting[i] << " "
-         << ratios[i] << std::endl;
+         << ratios[i] << " " << logarithmic_points[i] << "x"
+         << logarithmic_points[i] << std::endl;
   }
 }
 
