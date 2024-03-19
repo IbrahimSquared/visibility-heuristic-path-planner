@@ -39,3 +39,6 @@ output/
 # executables
 *.bat
 *.exe
+
+# ignore executable
+visibility_heuristic_planner
