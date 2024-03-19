@@ -126,8 +126,7 @@ void visibilityBasedSolver::solve() {
   max_iter_ = sharedConfig_->max_iter;
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
-  while (visibility_global_(end.first, end.second) <=
-         visibilityThreshold_) {
+  while (visibility_global_(end.first, end.second) <= visibilityThreshold_) {
     resetQueue();
     updateVisibility();
     auto node = heap_->top();
@@ -419,8 +418,7 @@ void visibilityBasedSolver::updateVisibility() {
       }
       v = v * occupancyComplement_->get(currentX, currentY);
       visibility_(currentX, currentY) = v;
-      visibility_global_(
-          currentX, currentY) = 
+      visibility_global_(currentX, currentY) =
           std::max(v, visibility_global_(currentX, currentY));
       if (v >= visibilityThreshold_) {
         if (cameFrom_(currentX, currentY) == 1e15) {
@@ -464,8 +462,7 @@ void visibilityBasedSolver::updateVisibility() {
       }
       v = v * occupancyComplement_->get(currentX, currentY);
       visibility_(currentX, currentY) = v;
-      visibility_global_(
-          currentX, currentY) = 
+      visibility_global_(currentX, currentY) =
           std::max(v, visibility_global_(currentX, currentY));
       if (v >= visibilityThreshold_) {
         if (cameFrom_(currentX, currentY) == 1e15) {
@@ -509,8 +506,7 @@ void visibilityBasedSolver::updateVisibility() {
       }
       v = v * occupancyComplement_->get(currentX, currentY);
       visibility_(currentX, currentY) = v;
-      visibility_global_(
-          currentX, currentY) = 
+      visibility_global_(currentX, currentY) =
           std::max(v, visibility_global_(currentX, currentY));
       if (v >= visibilityThreshold_) {
         if (cameFrom_(currentX, currentY) == 1e15) {
@@ -554,8 +550,7 @@ void visibilityBasedSolver::updateVisibility() {
       }
       v = v * occupancyComplement_->get(currentX, currentY);
       visibility_(currentX, currentY) = v;
-      visibility_global_(
-          currentX, currentY) = 
+      visibility_global_(currentX, currentY) =
           std::max(v, visibility_global_(currentX, currentY));
       if (v >= visibilityThreshold_) {
         if (cameFrom_(currentX, currentY) == 1e15) {
@@ -784,7 +779,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
       }
       v = v * occupancyComplement_->get(x, y);
       visibility_(x, y) = v;
-      visited(x,y) = true;
+      visited(x, y) = true;
     } else if (dx < 0 && dy >= 0) {
       if (dx == 0) {
         v = visibility_(x, y - 1);
@@ -822,7 +817,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
       }
       v = v * occupancyComplement_->get(x, y);
       visibility_(x, y) = v;
-      visited(x,y) = true;
+      visited(x, y) = true;
     } else if (dx < 0 && dy < 0) {
       if (dx == 0) {
         v = visibility_(x, y + 1);
@@ -860,7 +855,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
       }
       v = v * occupancyComplement_->get(x, y);
       visibility_(x, y) = v;
-      visited(x,y) = true;
+      visited(x, y) = true;
     } else if (dx >= 0 && dy < 0) {
       if (dx == 0) {
         v = visibility_(x, y + 1);
@@ -898,7 +893,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
       }
       v = v * occupancyComplement_->get(x, y);
       visibility_(x, y) = v;
-      visited(x,y) = true;
+      visited(x, y) = true;
     }
   }
 }
@@ -906,7 +901,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::saveStandAloneVisibility() {
+void visibilityBasedSolver::saveStandAloneVisibility() const {
   sf::Image image;
   image = *uniqueLoadedImage_;
   sf::Color color;
@@ -915,8 +910,7 @@ void visibilityBasedSolver::saveStandAloneVisibility() {
   for (size_t j = ny_ - 1; j > 0; --j) {
     for (size_t i = 0; i < nx_; ++i) {
       image.setPixel(i, ny_ - 1 - j,
-                     sf::Color(255 * visibility_(i, j),
-                               255 * visibility_(i, j),
+                     sf::Color(255 * visibility_(i, j), 255 * visibility_(i, j),
                                255 * visibility_(i, j)));
       // use this for binary visibility
       // if (visibility_(i, j) < visibilityThreshold_) {
@@ -969,7 +963,7 @@ void visibilityBasedSolver::saveStandAloneVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::saveRayCastingVisibility() {
+void visibilityBasedSolver::saveRayCastingVisibility() const {
   sf::Image image;
   image = *uniqueLoadedImage_;
   sf::Color color;
@@ -1031,7 +1025,7 @@ void visibilityBasedSolver::saveRayCastingVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::saveResults() {
+void visibilityBasedSolver::saveResults() const {
   namespace fs = std::filesystem;
   // Define the path to the output file
   std::string path = "./output/cameFrom.txt";
@@ -1227,7 +1221,8 @@ void visibilityBasedSolver::reconstructPath(const Node &current,
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::saveImageWithPath(const std::vector<point> &path) {
+void visibilityBasedSolver::saveImageWithPath(
+    const std::vector<point> &path) const {
   sf::Image image;
   image = *uniqueLoadedImage_;
   sf::Color color;

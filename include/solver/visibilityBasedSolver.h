@@ -41,10 +41,10 @@ public:
   void standAloneVisibility();
 
   // save standAloneVisibility results
-  void saveStandAloneVisibility();
+  void saveStandAloneVisibility() const;
 
   // save standAloneVisibility results
-  void saveRayCastingVisibility();
+  void saveRayCastingVisibility() const;
 
   /*!
    * @brief Benchmark by comparing the visibility computation
@@ -121,8 +121,8 @@ private:
   void computeVisibilityUsingQueue();
 
   // Save results
-  void saveResults();
-  void saveImageWithPath(const std::vector<point> &path);
+  void saveResults() const;
+  void saveImageWithPath(const std::vector<point> &path) const;
 
   // Heap to maintain the heuristic
   std::unique_ptr<std::priority_queue<Node>> heap_;
