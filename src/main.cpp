@@ -22,7 +22,7 @@ int main() {
   vbs::environment env = vbs::environment(config);
   // Initialize solver & solve
   vbs::visibilityBasedSolver solver = vbs::visibilityBasedSolver(env);
-  // solver.solve();
+  solver.solve();
   // solver.standAloneVisibility();
   solver.benchmark();
   // solver.benchmarkSeries();
