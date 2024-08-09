@@ -1,5 +1,5 @@
 # Visibility & Visibility Heuristic Path Planning
-This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem in Cartesian Grid Maps and its Application in Heuristic Path Planning (ICRA2024 pending, [arxiv paper](https://arxiv.org/abs/2403.06494)). <br>
+This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem in Cartesian Grid Maps and its Application in Heuristic Path Planning ([ICRA2024](https://ieeexplore.ieee.org/document/10611529), [arxiv paper](https://arxiv.org/abs/2403.06494)). <br>
 
 Provides a linear complexity & highly efficient 2D visibility solution, based on a solution to a linear first-order hyperbolic partial differential equation. The latter is the transport equation, as we define light/visibility as a transportable quantity, and transport it over the grid. 
 
