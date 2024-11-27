@@ -1190,7 +1190,7 @@ void visibilityBasedSolver::reconstructPath(const Node &current,
                                             std::vector<point> &resultingPath) {
   int x = current.x, y = current.y;
   double t = cameFrom_(x, y);
-  double t_old = INFINITY;
+  double t_old = std::numeric_limits<double>::max();
   while (t != t_old) {
     resultingPath.push_back({x, y});
     t_old = t;
