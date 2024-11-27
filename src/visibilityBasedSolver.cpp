@@ -699,10 +699,8 @@ void visibilityBasedSolver::computeVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 void visibilityBasedSolver::computeVisibilityUsingQueue() {
-  size_t currentX, currentY;
   double v = 0.0;
   point current;
-  double offset = 0.0;
 
   const size_t ls_x = ls_.first;
   const size_t ls_y = ls_.second;
