@@ -723,7 +723,7 @@ void visibilityBasedSolver::computeVisibilityUsingQueue() {
     const size_t x = current.first;
     const size_t y = current.second;
     q.pop();
-    if (x < 0 || x >= nx_ || y < 0 || y >= ny_) {
+    if (!isValid(x, y)) {
       continue;
     }
     if (visited.get(x, y)) {
