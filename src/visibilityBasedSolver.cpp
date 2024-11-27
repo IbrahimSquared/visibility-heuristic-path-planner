@@ -86,16 +86,14 @@ void visibilityBasedSolver::solve() {
   }
 
   // check if start and end are valid
-  if (start.first < 0 || start.first >= nx_ || start.second < 0 ||
-      start.second >= ny_) {
+  if (!isValid(start.first, start.second)) {
     std::cout << "############################## Solver output "
                  "##############################"
               << std::endl;
     std::cout << "Start point is out of bounds." << std::endl;
     return;
   }
-  if (end.first < 0 || end.first >= nx_ || end.second < 0 ||
-      end.second >= ny_) {
+  if (!isValid(end.first, end.second)) {
     std::cout << "############################## Solver output "
                  "##############################"
               << std::endl;
@@ -169,8 +167,7 @@ void visibilityBasedSolver::standAloneVisibility() {
   auto start = sharedConfig_->start;
 
   // check if start and end are valid
-  if (start.first < 0 || start.first >= nx_ || start.second < 0 ||
-      start.second >= ny_) {
+  if (!isValid(start.first, start.second)) {
     std::cout << "############################## Solver output "
                  "##############################"
               << std::endl;

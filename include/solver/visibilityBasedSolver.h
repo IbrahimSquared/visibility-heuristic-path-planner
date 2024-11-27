@@ -92,6 +92,16 @@ private:
   size_t nx_;
 
   /*!
+   * @brief Checks if requested cell is in grid
+   * @param [in] x x position of the cell
+   * @param [in] y y position of the cell
+   * @return true if cell is in grid, false otherwise
+   */
+  inline bool isValid(const size_t x, const size_t y) const {
+    return ((x < nx_) && (y < ny_));
+  }
+
+  /*!
    * @brief Currently a Euclidean measure of the distance but can be
    * generalized.
    * @param [in] source_x P1_x.
