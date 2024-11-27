@@ -196,8 +196,7 @@ void visibilityBasedSolver::benchmark() {
   auto start = sharedConfig_->start;
 
   // check if start and end are valid
-  if (start.first < 0 || start.first >= nx_ || start.second < 0 ||
-      start.second >= ny_) {
+  if (!isValid(start.first, start.second)) {
     std::cout << "############################## Solver output "
                  "##############################"
               << std::endl;
@@ -316,7 +315,7 @@ void visibilityBasedSolver::benchmarkSeries() {
   }
 
   for (int iter = 0; iter < num_points; ++iter) {
-    int i = logarithmic_points[iter];
+    size_t i = logarithmic_points[iter];
 
     visibility_.resize(i, i, 0.0);
     visibilityRayCasting_.resize(i, i, 1.0);
@@ -924,7 +923,7 @@ void visibilityBasedSolver::saveStandAloneVisibility() const {
   int y0 = ny_ - 1 - ls_.second;
   for (int j = -ballRadius; j <= ballRadius; ++j) {
     for (int k = -ballRadius; k <= ballRadius; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k <= ballRadius * ballRadius) {
           image.setPixel(x0 + j, y0 + k, color.Yellow);
         }
@@ -935,7 +934,7 @@ void visibilityBasedSolver::saveStandAloneVisibility() const {
   // add black ring around the yellow ball
   for (int j = -ballRadius - 1; j <= ballRadius + 1; ++j) {
     for (int k = -ballRadius - 1; k <= ballRadius + 1; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k > ballRadius * ballRadius &&
             j * j + k * k <= (ballRadius + 1) * (ballRadius + 1)) {
           image.setPixel(x0 + j, y0 + k, color.Black);
@@ -986,7 +985,7 @@ void visibilityBasedSolver::saveRayCastingVisibility() const {
   int y0 = ny_ - 1 - ls_.second;
   for (int j = -ballRadius; j <= ballRadius; ++j) {
     for (int k = -ballRadius; k <= ballRadius; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k <= ballRadius * ballRadius) {
           image.setPixel(x0 + j, y0 + k, color.Yellow);
         }
@@ -997,7 +996,7 @@ void visibilityBasedSolver::saveRayCastingVisibility() const {
   // add black ring around the yellow ball
   for (int j = -ballRadius - 1; j <= ballRadius + 1; ++j) {
     for (int k = -ballRadius - 1; k <= ballRadius + 1; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k > ballRadius * ballRadius &&
             j * j + k * k <= (ballRadius + 1) * (ballRadius + 1)) {
           image.setPixel(x0 + j, y0 + k, color.Black);
@@ -1051,7 +1050,7 @@ void visibilityBasedSolver::saveResults() const {
           os << "\n";
         }
       } else {
-        for (int j = 0; j < ny_; ++j) {
+        for (size_t j = 0; j < ny_; ++j) {
           for (size_t i = 0; i < nx_; ++i) {
             os << cameFrom_(i, j) << " ";
           }
@@ -1073,7 +1072,7 @@ void visibilityBasedSolver::saveResults() const {
     }
     if (of.is_open()) {
       std::ostream &os = of;
-      for (int i = 0; i < nb_of_sources_; ++i) {
+      for (size_t i = 0; i < nb_of_sources_; ++i) {
         if (sharedConfig_->mode == 2) {
           os << lightSources_[i].first << " "
              << ny_ - 1 - lightSources_[i].second;
@@ -1105,7 +1104,7 @@ void visibilityBasedSolver::saveResults() const {
           os << "\n";
         }
       } else {
-        for (int j = 0; j < ny_; ++j) {
+        for (size_t j = 0; j < ny_; ++j) {
           for (size_t i = 0; i < nx_; ++i) {
             os << visibility_global_(i, j) << " ";
           }
@@ -1135,7 +1134,7 @@ void visibilityBasedSolver::saveResults() const {
           os << "\n";
         }
       } else {
-        for (int j = 0; j < ny_; ++j) {
+        for (size_t j = 0; j < ny_; ++j) {
           for (size_t i = 0; i < nx_; ++i) {
             os << visibility_(i, j) << " ";
           }
@@ -1165,7 +1164,7 @@ void visibilityBasedSolver::saveResults() const {
           os << "\n";
         }
       } else {
-        for (int j = 0; j < ny_; ++j) {
+        for (size_t j = 0; j < ny_; ++j) {
           for (size_t i = 0; i < nx_; ++i) {
             os << occupancyComplement_->get(i, j) << " ";
           }
@@ -1258,7 +1257,7 @@ void visibilityBasedSolver::saveImageWithPath(
     y0 = ny_ - 1 - path[i].second;
     for (int j = -ballRadius; j <= ballRadius; ++j) {
       for (int k = -ballRadius; k <= ballRadius; ++k) {
-        if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+        if (isValid(x0 + j, y0 + k)) {
           if (j * j + k * k <= ballRadius * ballRadius) {
             image.setPixel(x0 + j, y0 + k, color.Cyan);
           }
@@ -1271,7 +1270,7 @@ void visibilityBasedSolver::saveImageWithPath(
   y0 = ny_ - 1 - path[0].second;
   for (int j = -ballRadius; j <= ballRadius; ++j) {
     for (int k = -ballRadius; k <= ballRadius; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k <= ballRadius * ballRadius) {
           image.setPixel(x0 + j, y0 + k, color.Green);
         }
@@ -1283,7 +1282,7 @@ void visibilityBasedSolver::saveImageWithPath(
   y0 = ny_ - 1 - path[path.size() - 1].second;
   for (int j = -ballRadius; j <= ballRadius; ++j) {
     for (int k = -ballRadius; k <= ballRadius; ++k) {
-      if (x0 + j >= 0 && x0 + j < nx_ && y0 + k >= 0 && y0 + k < ny_) {
+      if (isValid(x0 + j, y0 + k)) {
         if (j * j + k * k <= ballRadius * ballRadius) {
           image.setPixel(x0 + j, y0 + k, color.Red);
         }
