@@ -119,6 +119,14 @@ private:
 
   // visibility update
   void updateVisibility();
+  bool updateVisibilityAndPickBest(Node &bestOut);
+
+  std::vector<float> distToEnd_;  // float is fine for a heuristic
+  size_t distToEnd_nx_ = 0, distToEnd_ny_ = 0;
+  point  distToEnd_end_{-1, -1};
+
+  void buildDistToEndCache();
+
 
   // Stand-alone visibility computation (Algorithm 1 in the paper). More
   // suitable for sparse environments.

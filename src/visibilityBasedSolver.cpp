@@ -13,6 +13,7 @@
 #include <vector>
 
 namespace vbs {
+constexpr double CAMEFROM_UNSET = 1e15;
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -80,7 +81,7 @@ void visibilityBasedSolver::resetQueue() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::solve() {
+void vbs::visibilityBasedSolver::solve() {
   auto time_start = std::chrono::high_resolution_clock::now();
 
   // Init
@@ -92,74 +93,97 @@ void visibilityBasedSolver::solve() {
     end.second = ny_ - 1 - end.second;
   }
 
-  // check if start and end are valid
+  // Validate start/end
   if (!isValid(start.first, start.second)) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "Start point is out of bounds." << std::endl;
+                 "##############################\n";
+    std::cout << "Start point is out of bounds.\n";
     return;
   }
   if (!isValid(end.first, end.second)) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "End point is out of bounds." << std::endl;
+                 "##############################\n";
+    std::cout << "End point is out of bounds.\n";
     return;
   }
   if (occupancyComplement_->get(start.first, start.second) == 0) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "Start point is not valid (occupied)" << std::endl;
+                 "##############################\n";
+    std::cout << "Start point is not valid (occupied)\n";
     return;
   }
   if (occupancyComplement_->get(end.first, end.second) == 0) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "End point is not valid (occupied)" << std::endl;
+                 "##############################\n";
+    std::cout << "End point is not valid (occupied)\n";
     return;
   }
 
-  ls_ = start;
-  end_ = end;
+  // Planner state reset (important if solve() can be called multiple times)
+  {
+    auto *glob = visibility_global_.data();
+    auto *cf = cameFrom_.data();
+    const size_t N = nx_ * ny_;
+    std::fill(glob, glob + N, 0.0);
+    std::fill(cf, cf + N, CAMEFROM_UNSET);
+  }
 
-  lightSources_[nb_of_sources_] = start;
-  cameFrom_(start.first, start.second) = nb_of_sources_;
-  visibility_global_(end.first, end.second) = 0;
+  nb_of_sources_ = 0;
   max_iter_ = sharedConfig_->max_iter;
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
-  while (visibility_global_(end.first, end.second) <= visibilityThreshold_) {
-    resetQueue();
-    updateVisibility();
-    auto node = heap_->top();
-    ls_ = {node.x, node.y};
-    ++nb_of_sources_;
-    lightSources_[nb_of_sources_] = ls_;
-    if (nb_of_sources_ > max_iter_) {
-      std::cout << "Max iters hit. Solution could not be found. Try lowering "
-                   "visibility threshold."
-                << std::endl;
+  ls_ = start;
+  end_ = end;
+  buildDistToEndCache();
+
+  lightSources_[0] = start;
+  cameFrom_(start.first, start.second) = 0;
+
+  // Main loop
+  while (true) {
+    Node best;
+
+    const bool haveCandidate = updateVisibilityAndPickBest(best);
+
+    // If end is now visible enough, stop WITHOUT consuming another source slot
+    if (visibility_global_(end_.first, end_.second) >= visibilityThreshold_) {
+      break;
+    }
+
+    if (!haveCandidate) {
+      std::cout << "No valid next light-source candidate found.\n";
       return;
     }
+
+    // Advance to next source
+    ++nb_of_sources_;
+    if (nb_of_sources_ > max_iter_) {
+      std::cout << "Max iters hit. Solution could not be found. Try lowering "
+                   "visibility threshold.\n";
+      return;
+    }
+
+    ls_ = {static_cast<int>(best.x), static_cast<int>(best.y)};
+    lightSources_[nb_of_sources_] = ls_;
   }
-  lightSources_[nb_of_sources_] = end;
+
+  // Optionally append end as a final marker (NOT referenced by cameFrom
+  // indices)
+  ++nb_of_sources_;
+  lightSources_[nb_of_sources_] = end_;
 
   auto time_stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
       time_stop - time_start);
-  if (!sharedConfig_->silent) {
-    if (sharedConfig_->timer) {
-      std::cout << "############################## Solver output "
-                   "##############################"
-                << "\n"
-                << "Execution time in us: " << duration.count() << "us"
-                << std::endl;
-    }
+
+  if (!sharedConfig_->silent && sharedConfig_->timer) {
+    std::cout << "############################## Solver output "
+                 "##############################\n";
+    std::cout << "Execution time in us: " << duration.count() << "us\n";
   }
+
   saveResults();
+
   std::vector<point> path;
   reconstructPath(Node{static_cast<size_t>(end_.first),
                        static_cast<size_t>(end_.second), 0},
@@ -654,6 +678,126 @@ void visibilityBasedSolver::updateVisibility() {
       }
     }
   }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::buildDistToEndCache() {
+  if (distToEnd_nx_ == nx_ && distToEnd_ny_ == ny_ &&
+      distToEnd_end_.first == end_.first &&
+      distToEnd_end_.second == end_.second && distToEnd_.size() == nx_ * ny_) {
+    return; // already valid
+  }
+
+  distToEnd_.assign(nx_ * ny_, 0.0f);
+  const float ex = static_cast<float>(end_.first);
+  const float ey = static_cast<float>(end_.second);
+
+  for (size_t y = 0; y < ny_; ++y) {
+    const float fy = static_cast<float>(y) - ey;
+    const size_t row = y * nx_;
+    for (size_t x = 0; x < nx_; ++x) {
+      const float fx = static_cast<float>(x) - ex;
+      distToEnd_[row + x] = std::sqrt(fx * fx + fy * fy);
+    }
+  }
+
+  distToEnd_nx_ = nx_;
+  distToEnd_ny_ = ny_;
+  distToEnd_end_ = end_;
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+bool vbs::visibilityBasedSolver::updateVisibilityAndPickBest(Node &bestOut) {
+  // 1) Compute local visibility from current ls_ using your fastest exact
+  // kernel.
+  //    This overwrites the entire visibility_ field (no need to clear it).
+  computeVisibility_parallelSections();
+  // computeVisibility_original();
+  // computeVisibility_rowOptimizedSerial();
+
+  auto *vis = visibility_.data();
+  auto *glob = visibility_global_.data();
+  auto *cf = cameFrom_.data();
+
+  const size_t nx = nx_;
+  const size_t ny = ny_;
+  const size_t N = nx * ny;
+
+  const size_t endx = static_cast<size_t>(end_.first);
+  const size_t endy = static_cast<size_t>(end_.second);
+
+  std::less<Node> cmp; // same comparator you used in priority_queue
+  bool haveBest = false;
+  Node best{0, 0, 0.0};
+
+  // Scan all cells:
+  // - update global visibility
+  // - set cameFrom once when local vis crosses threshold
+  // - select best candidate according to same ordering as your heap top
+#pragma omp parallel
+  {
+    std::less<Node> lcmp;
+    bool lhaveBest = false;
+    Node lbest{0, 0, 0.0};
+
+#pragma omp for nowait
+    for (long long idx_ll = 0; idx_ll < static_cast<long long>(N); ++idx_ll) {
+      const size_t idx = static_cast<size_t>(idx_ll);
+
+      const double v = vis[idx];
+
+      // global = max(global, local)
+      double g = glob[idx];
+      if (v > g) {
+        g = v;
+        glob[idx] = v;
+      }
+
+      // cameFrom: first source that makes local >= threshold
+      if (v >= visibilityThreshold_ && cf[idx] == CAMEFROM_UNSET) {
+        cf[idx] = static_cast<double>(nb_of_sources_);
+      }
+
+      // Candidate set is based on GLOBAL threshold (same as your original code)
+      if (g >= visibilityThreshold_) {
+        const size_t x = idx % nx;
+        const size_t y = idx / nx;
+
+        const size_t parentIdx = static_cast<size_t>(cf[idx]);
+        const point parent = lightSources_[parentIdx];
+
+        const double h =
+            (scale_ * g) + (eval_d(x, y, endx, endy) +
+                            eval_d(x, y, static_cast<size_t>(parent.first),
+                                   static_cast<size_t>(parent.second)));
+
+        Node cand{x, y, h};
+
+        // pick "best" exactly like priority_queue(top) would
+        if (!lhaveBest || lcmp(lbest, cand)) {
+          lbest = cand;
+          lhaveBest = true;
+        }
+      }
+    }
+
+#pragma omp critical
+    {
+      if (lhaveBest && (!haveBest || cmp(best, lbest))) {
+        best = lbest;
+        haveBest = true;
+      }
+    }
+  }
+
+  if (!haveBest)
+    return false;
+  bestOut = best;
+  return true;
 }
 
 /*****************************************************************************/
