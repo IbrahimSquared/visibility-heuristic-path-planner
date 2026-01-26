@@ -28,6 +28,12 @@ public:
   inline T& operator()(size_t x, size_t y) { return data_[x + y * nx_]; }
   inline const T& operator()(size_t x, size_t y) const { return data_[x + y * nx_]; }
 
+  // Direct access to the underlying contiguous buffer.
+  // Useful for performance-critical kernels where repeated (x,y)->linear-index
+  // computations and accessor call overhead become significant.
+  T* data() { return data_.get(); }
+  const T* data() const { return data_.get(); }
+
   size_t nx() const { return nx_; }
   size_t ny() const { return ny_; }
   size_t size() const { return size_; }

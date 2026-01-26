@@ -568,130 +568,185 @@ void visibilityBasedSolver::updateVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 void visibilityBasedSolver::computeVisibility() {
-  size_t currentX, currentY;
-  double v = 0.0;
-  double offset = 0.0;
+  // Performance notes:
+  // - Field<T> is stored as data[x + y*nx] => x is contiguous in memory.
+  // - We traverse with x as the inner loop (per quadrant) for cache locality/prefetch.
+  // - Use raw pointers (Field::data()) and precomputed row offsets to avoid repeated
+  //   (x,y)->linear index calculations in tight loops.
+  // Q1 (x+, y+): x increases, y increases. Inner loop over x => contiguous writes.
+  auto *vis = visibility_.data();
+  const auto *occ = occupancyComplement_->data();
+  const size_t nx = nx_;
+  const size_t ny = ny_;
+  const size_t lx = ls_.first;
+  const size_t ly = ls_.second;
 
-  // Q1
-  max_x_ = nx_ - ls_.first;
-  max_y_ = ny_ - ls_.second;
+  for (size_t y = ly; y < ny; ++y) {
+    const size_t j = y - ly;
+    const size_t row = y * nx;
+    const size_t row_m1 = (y - 1) * nx;
 
-  for (size_t i = 0; i < max_x_; ++i) {
-    currentX = ls_.first + i;
-    for (size_t j = 0; j < max_y_; ++j) {
-      currentY = ls_.second + j;
+    for (size_t x = lx; x < nx; ++x) {
+      const size_t i = x - lx;
+      const size_t idx = row + x;
+
+      double v;
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_(currentX, currentY - 1);
+        v = vis[row_m1 + x]; // (x, y-1)
       } else if (j == 0) {
-        v = visibility_(currentX - 1, currentY);
+        v = vis[row + (x - 1)]; // (x-1, y)
+      } else if (i == j) {
+        v = vis[row_m1 + (x - 1)]; // (x-1, y-1)
       } else if (i > j) {
-        c_ = (double)(currentY - ls_.second + offset) /
-             (currentX - ls_.first + offset);
-        v = visibility_(currentX - 1, currentY) -
-            c_ * (visibility_(currentX - 1, currentY) -
-                  visibility_(currentX - 1, currentY - 1));
-      } else if (j > i) {
-        c_ = (double)(currentX - ls_.first + offset) /
-             (currentY - ls_.second + offset);
-        v = visibility_(currentX, currentY - 1) -
-            c_ * (visibility_(currentX, currentY - 1) -
-                  visibility_(currentX - 1, currentY - 1));
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x - 1)];
+        const double uD = vis[row_m1 + (x - 1)];
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        const double c = double(i) / double(j);
+        const double uP = vis[row_m1 + x];
+        const double uD = vis[row_m1 + (x - 1)];
+        v = uP - c * (uP - uD);
       }
-      v = v * occupancyComplement_->get(currentX, currentY);
-      visibility_(currentX, currentY) = v;
+
+      vis[idx] = v * occ[idx];
     }
   }
-  // Q2
-  max_x_ = ls_.first;
-  max_y_ = ny_ - ls_.second;
-  for (size_t i = 0; i < max_x_; ++i) {
-    currentX = ls_.first - i;
-    for (size_t j = 0; j < max_y_; ++j) {
-      currentY = ls_.second + j;
+
+  // Q2 (x-, y+): x decreases but still contiguous in memory; avoid size_t underflow.
+  for (size_t y = ly; y < ny; ++y) {
+    const size_t j = y - ly;
+    const size_t row = y * nx;
+    const size_t row_m1 = (y - 1) * nx;
+
+    // x runs from lx down to 0 (inclusive)
+    for (size_t x = lx; /*x>=0*/; --x) {
+      const size_t i = lx - x; // >= 0
+      const size_t idx = row + x;
+
+      double v;
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_(currentX, currentY - 1);
+        // from (x, y-1)
+        v = vis[row_m1 + x];
       } else if (j == 0) {
-        v = visibility_(currentX + 1, currentY);
+        // from (x+1, y)
+        v = vis[row + (x + 1)];
+      } else if (i == j) {
+        // from (x+1, y-1)
+        v = vis[row_m1 + (x + 1)];
       } else if (i > j) {
-        c_ = (double)(currentY - ls_.second + offset) /
-             (ls_.first - currentX + offset);
-        v = visibility_(currentX + 1, currentY) -
-            c_ * (visibility_(currentX + 1, currentY) -
-                  visibility_(currentX + 1, currentY - 1));
-      } else if (j > i) {
-        c_ = (double)(ls_.first - currentX + offset) /
-             (currentY - ls_.second + offset);
-        v = visibility_(currentX, currentY - 1) -
-            c_ * (visibility_(currentX, currentY - 1) -
-                  visibility_(currentX + 1, currentY - 1));
+        // c = (dy)/(dx) where dx is negative => c = j/(-i)
+        const double c = double(j) / (-double(i));
+        const double uP = vis[row + (x + 1)];
+        const double uD = vis[row_m1 + (x + 1)];
+        v = uP + c * (uP - uD);
+      } else { // j > i
+        // c = dx/dy where dx is negative => c = (-i)/j
+        const double c = (-double(i)) / double(j);
+        const double uP = vis[row_m1 + x];
+        const double uD = vis[row_m1 + (x + 1)];
+        v = uP + c * (uP - uD);
       }
-      v = v * occupancyComplement_->get(currentX, currentY);
-      visibility_(currentX, currentY) = v;
+
+      vis[idx] = v * occ[idx];
+
+      if (x == 0)
+        break; // size_t underflow guard
     }
   }
-  // Q3
-  max_x_ = ls_.first;
-  max_y_ = ls_.second;
-  for (size_t i = 0; i < max_x_; ++i) {
-    currentX = ls_.first - i;
-    for (size_t j = 0; j < max_y_; ++j) {
-      currentY = ls_.second - j;
+
+  // Q3 (x-, y-): same contiguous access, y decreases (row_p1 used for y+1 neighbor).
+  for (size_t y = ly; /*y>=0*/; --y) {
+    const size_t j = ly - y;
+    const size_t row = y * nx;
+    const size_t row_p1 = (y + 1) * nx;
+
+    // x runs from lx down to 0
+    for (size_t x = lx; /*x>=0*/; --x) {
+      const size_t i = lx - x;
+      const size_t idx = row + x;
+
+      double v;
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_(currentX, currentY + 1);
+        // from (x, y+1)
+        v = vis[row_p1 + x];
       } else if (j == 0) {
-        v = visibility_(currentX + 1, currentY);
+        // from (x+1, y)
+        v = vis[row + (x + 1)];
+      } else if (i == j) {
+        // from (x+1, y+1)
+        v = vis[row_p1 + (x + 1)];
       } else if (i > j) {
-        c_ = (double)(ls_.second - currentY + offset) /
-             (ls_.first - currentX + offset);
-        v = visibility_(currentX + 1, currentY) -
-            c_ * (visibility_(currentX + 1, currentY) -
-                  visibility_(currentX + 1, currentY + 1));
-      } else if (j > i) {
-        c_ = (double)(ls_.first - currentX + offset) /
-             (ls_.second - currentY + offset);
-        v = visibility_(currentX, currentY + 1) -
-            c_ * (visibility_(currentX, currentY + 1) -
-                  visibility_(currentX + 1, currentY + 1));
+        // dy negative, dx negative => c = (-j)/(-i) = j/i
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x + 1)];
+        const double uD = vis[row_p1 + (x + 1)];
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        // c = dx/dy = (-i)/(-j) = i/j
+        const double c = double(i) / double(j);
+        const double uP = vis[row_p1 + x];
+        const double uD = vis[row_p1 + (x + 1)];
+        v = uP - c * (uP - uD);
       }
-      v = v * occupancyComplement_->get(currentX, currentY);
-      visibility_(currentX, currentY) = v;
+
+      vis[idx] = v * occ[idx];
+
+      if (x == 0)
+        break;
     }
+
+    if (y == 0)
+      break;
   }
-  // Q4
-  max_x_ = nx_ - ls_.first;
-  max_y_ = ls_.second;
-  for (size_t i = 0; i < max_x_; ++i) {
-    currentX = ls_.first + i;
-    for (size_t j = 0; j < max_y_; ++j) {
-      currentY = ls_.second - j;
+
+  // Q4 (x+, y-): x increases, y decreases.
+  for (size_t y = ly; /*y>=0*/; --y) {
+    const size_t j = ly - y;
+    const size_t row = y * nx;
+    const size_t row_p1 = (y + 1) * nx;
+
+    for (size_t x = lx; x < nx; ++x) {
+      const size_t i = x - lx;
+      const size_t idx = row + x;
+
+      double v;
       if (i == 0 && j == 0) {
         v = lightStrength_;
       } else if (i == 0) {
-        v = visibility_(currentX, currentY + 1);
+        // from (x, y+1)
+        v = vis[row_p1 + x];
       } else if (j == 0) {
-        v = visibility_(currentX - 1, currentY);
+        // from (x-1, y)
+        v = vis[row + (x - 1)];
+      } else if (i == j) {
+        // from (x-1, y+1)
+        v = vis[row_p1 + (x - 1)];
       } else if (i > j) {
-        c_ = (double)(ls_.second - currentY + offset) /
-             (currentX - ls_.first + offset);
-        v = visibility_(currentX - 1, currentY) -
-            c_ * (visibility_(currentX - 1, currentY) -
-                  visibility_(currentX - 1, currentY + 1));
-      } else if (j > i) {
-        c_ = (double)(currentX - ls_.first + offset) /
-             (ls_.second - currentY + offset);
-        v = visibility_(currentX, currentY + 1) -
-            c_ * (visibility_(currentX, currentY + 1) -
-                  visibility_(currentX - 1, currentY + 1));
+        // dy negative, dx positive => c = (-j)/i
+        const double c = (-double(j)) / double(i);
+        const double uP = vis[row + (x - 1)];
+        const double uD = vis[row_p1 + (x - 1)];
+        v = uP + c * (uP - uD);
+      } else { // j > i
+        // c = dx/dy = i/(-j)
+        const double c = double(i) / (-double(j));
+        const double uP = vis[row_p1 + x];
+        const double uD = vis[row_p1 + (x - 1)];
+        v = uP + c * (uP - uD);
       }
-      v = v * occupancyComplement_->get(currentX, currentY);
-      visibility_(currentX, currentY) = v;
+
+      vis[idx] = v * occ[idx];
     }
+
+    if (y == 0)
+      break;
   }
 }
 
