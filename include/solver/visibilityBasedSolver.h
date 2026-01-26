@@ -122,13 +122,24 @@ private:
 
   // Stand-alone visibility computation (Algorithm 1 in the paper). More
   // suitable for sparse environments.
-  void computeVisibility();
+  void computeVisibility_original();
+  void computeVisibility_rowOptimizedSerial();
+  void computeVisibility_parallelSections();
 
   /*!
    * @brief Stand-alone visibility computation using a queue. It has termination
    * conditions. generalized. More suitable for denser environments.
    */
   void computeVisibilityUsingQueue();
+
+  void computeQ1_rowwise(double* vis, const double* occ,
+                         size_t nx, size_t ny, size_t lx, size_t ly) const;
+  void computeQ2_rowwise(double* vis, const double* occ,
+                         size_t nx, size_t ny, size_t lx, size_t ly) const;
+  void computeQ3_rowwise(double* vis, const double* occ,
+                         size_t nx, size_t ny, size_t lx, size_t ly) const;
+  void computeQ4_rowwise(double* vis, const double* occ,
+                         size_t nx, size_t ny, size_t lx, size_t ly) const;
 
   // Save results
   void saveResults() const;

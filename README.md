@@ -1,3 +1,15 @@
+### Visibility kernel benchmarking (C++ / OpenMP)
+
+This repo includes three visibility-kernel implementations:
+
+* **Original** nested-loop sweep (baseline)
+* **Row-optimized (serial)** sweep using contiguous x-inner traversal and raw buffer access
+* **Parallel (OpenMP sections)** quadrant sweep (dependency-safe; computes axes serially then runs 4 disjoint quadrant interiors in parallel)
+
+`benchmark()` reports per-kernel compute time and verifies **bitwise exactness** (`memcmp`) against the baseline after timing.
+
+Build requirements: OpenMP (linked via `OpenMP::OpenMP_CXX`).
+
 # Visibility & Visibility Heuristic Path Planning
 
 This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem in Cartesian Grid Maps and its Application in Heuristic Path Planning ([ICRA2024](https://ieeexplore.ieee.org/document/10611529), [arxiv paper](https://arxiv.org/abs/2403.06494)). <br>

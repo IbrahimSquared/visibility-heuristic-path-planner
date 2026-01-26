@@ -5,6 +5,13 @@
 #include <fstream>
 #include <iostream>
 
+#include <algorithm>
+#include <chrono>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+
 namespace vbs {
 
 /*****************************************************************************/
@@ -198,36 +205,119 @@ void visibilityBasedSolver::benchmark() {
   // check if start and end are valid
   if (!isValid(start.first, start.second)) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "Start point is out of bounds." << std::endl;
+                 "##############################\n";
+    std::cout << "Start point is out of bounds.\n";
     return;
   }
   if (occupancyComplement_->get(start.first, start.second) == 0) {
     std::cout << "############################## Solver output "
-                 "##############################"
-              << std::endl;
-    std::cout << "Start point is not valid (occupied)" << std::endl;
+                 "##############################\n";
+    std::cout << "Start point is not valid (occupied)\n";
     return;
   }
 
   ls_ = start;
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
 
-  auto time_start = std::chrono::high_resolution_clock::now();
-  computeVisibility();
-  // computeVisibilityUsingQueue();
-  auto time_stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-      time_stop - time_start);
+  // --- Helpers for timing and exactness ---
+  auto *vis = visibility_.data();
+  const size_t n = visibility_.size();
+  const size_t bytes = n * sizeof(double);
 
+  auto clear_visibility = [&]() { std::fill(vis, vis + n, 0.0); };
+
+  auto run_and_capture = [&](const char * /*name*/, auto &&fn,
+                             std::vector<double> &out) -> long long {
+    // Warm-up (avoids first-run effects: cache/OMP runtime init)
+    clear_visibility();
+    fn();
+
+    // Timed run
+    clear_visibility();
+    const auto t0 = std::chrono::high_resolution_clock::now();
+    fn();
+    const auto t1 = std::chrono::high_resolution_clock::now();
+
+    // Capture output (NOT timed)
+    out.resize(n);
+    std::memcpy(out.data(), vis, bytes);
+
+    return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0)
+        .count();
+  };
+
+  auto exact_match = [&](const std::vector<double> &a,
+                         const std::vector<double> &b) -> bool {
+    if (a.size() != b.size())
+      return false;
+    return std::memcmp(a.data(), b.data(), bytes) == 0;
+  };
+
+  // --- Run 3 methods ---
+  std::vector<double> out_orig, out_row, out_par;
+
+  const long long t_orig = run_and_capture(
+      "original", [&]() { computeVisibility_original(); }, out_orig);
+
+  const long long t_row = run_and_capture(
+      "row-opt", [&]() { computeVisibility_rowOptimizedSerial(); }, out_row);
+
+  const long long t_par = run_and_capture(
+      "parallel", [&]() { computeVisibility_parallelSections(); }, out_par);
+
+  // --- Exactness checks (NOT timed) ---
+  const bool ok_row = exact_match(out_row, out_orig);
+  const bool ok_par = exact_match(out_par, out_orig);
+
+  // --- Print results ---
+  if (!sharedConfig_->silent) {
+    std::cout
+        << "================ Visibility kernel benchmark ================\n";
+    std::cout << "Grid: " << nx_ << " x " << ny_ << " (N=" << (nx_ * ny_)
+              << ")\n\n";
+
+    std::cout << std::left << std::setw(22) << "Method" << std::setw(14)
+              << "time (us)" << std::setw(14) << "speedup"
+              << "exact?\n";
+    std::cout
+        << "-------------------------------------------------------------\n";
+
+    auto speedup = [&](long long t) -> double {
+      return (t > 0) ? (double)t_orig / (double)t : 0.0;
+    };
+
+    std::cout << std::left << std::setw(22) << "Original" << std::setw(14)
+              << t_orig << std::setw(14) << 1.0 << "baseline\n";
+
+    std::cout << std::left << std::setw(22) << "Row-optimized (serial)"
+              << std::setw(14) << t_row << std::setw(14) << speedup(t_row)
+              << (ok_row ? "EXACT ✅" : "MISMATCH ❌") << "\n";
+
+    std::cout << std::left << std::setw(22) << "Parallel (sections)"
+              << std::setw(14) << t_par << std::setw(14) << speedup(t_par)
+              << (ok_par ? "EXACT ✅" : "MISMATCH ❌") << "\n";
+    std::cout
+        << "=============================================================\n";
+  }
+
+  // --- Restore the fastest output into visibility_ for saving/visualization
+  // --- Prefer fastest among row/parallel (original is baseline).
+  const std::vector<double> *best = &out_row;
+  long long t_best = t_row;
+
+  if (t_par > 0 && t_par < t_best) {
+    best = &out_par;
+    t_best = t_par;
+  }
+
+  std::memcpy(vis, best->data(), bytes);
   saveStandAloneVisibility();
 
+  // --- Keep your raycasting benchmark (optional; can comment out) ---
   auto time_start2 = std::chrono::high_resolution_clock::now();
-  // Raycasting without timing
   for (size_t i = 0; i < nx_; ++i) {
     for (size_t j = 0; j < ny_; ++j) {
-      raycasting(ls_.first, ls_.second, i, j);
+      raycasting(ls_.first, ls_.second, (int)i, (int)j);
     }
   }
   auto time_stop2 = std::chrono::high_resolution_clock::now();
@@ -237,28 +327,22 @@ void visibilityBasedSolver::benchmark() {
   saveRayCastingVisibility();
 
   if (!sharedConfig_->silent) {
-    std::cout << "############################## Solver output "
-                 "##############################"
-              << "\n"
-              << "Visibility computation time in us: " << duration.count()
-              << "us" << std::endl;
     std::cout << "Raycasting computation time in us: " << duration2.count()
-              << "us" << std::endl;
-    std::cout << "Ratio. Proposed method is: "
-              << (double)duration2.count() / duration.count()
-              << " faster than typical raycasting." << std::endl;
+              << "us\n";
+    std::cout << "Ratio (raycasting / best-visibility): "
+              << (double)duration2.count() / (double)t_best << "\n";
   }
 
+  // Density print (unchanged)
   int count = 0;
   for (size_t i = 0; i < nx_; ++i) {
     for (size_t j = 0; j < ny_; ++j) {
-      if (occupancyComplement_->get(i, j) == 0) {
+      if (occupancyComplement_->get(i, j) == 0)
         ++count;
-      }
     }
   }
   std::cout << "Density of the occupancy grid: "
-            << (double)count / (nx_ * ny_) * 100 << "%" << std::endl;
+            << (double)count / (nx_ * ny_) * 100 << "%\n";
 }
 
 /*****************************************************************************/
@@ -326,7 +410,7 @@ void visibilityBasedSolver::benchmarkSeries() {
     ny_ = i;
 
     auto time_start = std::chrono::high_resolution_clock::now();
-    computeVisibility();
+    computeVisibility_parallelSections();
     auto time_stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
         time_stop - time_start);
@@ -567,13 +651,169 @@ void visibilityBasedSolver::updateVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void visibilityBasedSolver::computeVisibility() {
+void visibilityBasedSolver::computeVisibility_original() {
+  size_t currentX, currentY;
+  double v = 0.0;
+  double offset = 0.0;
+
+  // Q1 (right, down) — already covers x=nx-1 and y=ny-1
+  max_x_ = nx_ - ls_.first;
+  max_y_ = ny_ - ls_.second;
+
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first + i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second + j;
+
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_(currentX, currentY - 1);
+      } else if (j == 0) {
+        v = visibility_(currentX - 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX - 1, currentY - 1);
+      } else if (i > j) {
+        c_ = (double)(currentY - ls_.second + offset) /
+             (currentX - ls_.first + offset);
+        v = visibility_(currentX - 1, currentY) -
+            c_ * (visibility_(currentX - 1, currentY) -
+                  visibility_(currentX - 1, currentY - 1));
+      } else { // j > i
+        c_ = (double)(currentX - ls_.first + offset) /
+             (currentY - ls_.second + offset);
+        v = visibility_(currentX, currentY - 1) -
+            c_ * (visibility_(currentX, currentY - 1) -
+                  visibility_(currentX - 1, currentY - 1));
+      }
+
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+    }
+  }
+
+  // Q2 (left, down) — FIX: include x=0 by using lx+1
+  max_x_ = ls_.first + 1; // was: ls_.first
+  max_y_ = ny_ - ls_.second;
+
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first - i; // now reaches 0 when i==lx
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second + j;
+
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_(currentX, currentY - 1);
+      } else if (j == 0) {
+        v = visibility_(currentX + 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX + 1, currentY - 1);
+      } else if (i > j) {
+        c_ = (double)(currentY - ls_.second + offset) /
+             (ls_.first - currentX + offset);
+        v = visibility_(currentX + 1, currentY) -
+            c_ * (visibility_(currentX + 1, currentY) -
+                  visibility_(currentX + 1, currentY - 1));
+      } else { // j > i
+        c_ = (double)(ls_.first - currentX + offset) /
+             (currentY - ls_.second + offset);
+        v = visibility_(currentX, currentY - 1) -
+            c_ * (visibility_(currentX, currentY - 1) -
+                  visibility_(currentX + 1, currentY - 1));
+      }
+
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+    }
+  }
+
+  // Q3 (left, up) — FIX: include x=0 and y=0 by using +1 on both
+  max_x_ = ls_.first + 1;  // was: ls_.first
+  max_y_ = ls_.second + 1; // was: ls_.second
+
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first - i; // reaches 0
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second - j; // reaches 0
+
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_(currentX, currentY + 1);
+      } else if (j == 0) {
+        v = visibility_(currentX + 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX + 1, currentY + 1);
+      } else if (i > j) {
+        c_ = (double)(ls_.second - currentY + offset) /
+             (ls_.first - currentX + offset);
+        v = visibility_(currentX + 1, currentY) -
+            c_ * (visibility_(currentX + 1, currentY) -
+                  visibility_(currentX + 1, currentY + 1));
+      } else { // j > i
+        c_ = (double)(ls_.first - currentX + offset) /
+             (ls_.second - currentY + offset);
+        v = visibility_(currentX, currentY + 1) -
+            c_ * (visibility_(currentX, currentY + 1) -
+                  visibility_(currentX + 1, currentY + 1));
+      }
+
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+    }
+  }
+
+  // Q4 (right, up) — FIX: include y=0 by using ly+1
+  max_x_ = nx_ - ls_.first;
+  max_y_ = ls_.second + 1; // was: ls_.second
+
+  for (size_t i = 0; i < max_x_; ++i) {
+    currentX = ls_.first + i;
+    for (size_t j = 0; j < max_y_; ++j) {
+      currentY = ls_.second - j; // now reaches 0
+
+      if (i == 0 && j == 0) {
+        v = lightStrength_;
+      } else if (i == 0) {
+        v = visibility_(currentX, currentY + 1);
+      } else if (j == 0) {
+        v = visibility_(currentX - 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX - 1, currentY + 1);
+      } else if (i > j) {
+        c_ = (double)(ls_.second - currentY + offset) /
+             (currentX - ls_.first + offset);
+        v = visibility_(currentX - 1, currentY) -
+            c_ * (visibility_(currentX - 1, currentY) -
+                  visibility_(currentX - 1, currentY + 1));
+      } else { // j > i
+        c_ = (double)(currentX - ls_.first + offset) /
+             (ls_.second - currentY + offset);
+        v = visibility_(currentX, currentY + 1) -
+            c_ * (visibility_(currentX, currentY + 1) -
+                  visibility_(currentX - 1, currentY + 1));
+      }
+
+      v = v * occupancyComplement_->get(currentX, currentY);
+      visibility_(currentX, currentY) = v;
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void visibilityBasedSolver::computeVisibility_rowOptimizedSerial() {
   // Performance notes:
   // - Field<T> is stored as data[x + y*nx] => x is contiguous in memory.
-  // - We traverse with x as the inner loop (per quadrant) for cache locality/prefetch.
-  // - Use raw pointers (Field::data()) and precomputed row offsets to avoid repeated
+  // - We traverse with x as the inner loop (per quadrant) for cache
+  // locality/prefetch.
+  // - Use raw pointers (Field::data()) and precomputed row offsets to avoid
+  // repeated
   //   (x,y)->linear index calculations in tight loops.
-  // Q1 (x+, y+): x increases, y increases. Inner loop over x => contiguous writes.
+  // Q1 (x+, y+): x increases, y increases. Inner loop over x => contiguous
+  // writes.
   auto *vis = visibility_.data();
   const auto *occ = occupancyComplement_->data();
   const size_t nx = nx_;
@@ -615,7 +855,8 @@ void visibilityBasedSolver::computeVisibility() {
     }
   }
 
-  // Q2 (x-, y+): x decreases but still contiguous in memory; avoid size_t underflow.
+  // Q2 (x-, y+): x decreases but still contiguous in memory; avoid size_t
+  // underflow.
   for (size_t y = ly; y < ny; ++y) {
     const size_t j = y - ly;
     const size_t row = y * nx;
@@ -659,7 +900,8 @@ void visibilityBasedSolver::computeVisibility() {
     }
   }
 
-  // Q3 (x-, y-): same contiguous access, y decreases (row_p1 used for y+1 neighbor).
+  // Q3 (x-, y-): same contiguous access, y decreases (row_p1 used for y+1
+  // neighbor).
   for (size_t y = ly; /*y>=0*/; --y) {
     const size_t j = ly - y;
     const size_t row = y * nx;
@@ -747,6 +989,326 @@ void visibilityBasedSolver::computeVisibility() {
 
     if (y == 0)
       break;
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+// What this does:
+// - Keeps your fast row-wise (x-inner) traversal for cache locality.
+// - Parallelizes only across the 4 disjoint quadrants using OpenMP sections.
+// - Avoids races by partitioning the grid into non-overlapping regions:
+//     Q1: x >= lx, y >= ly  (but we SKIP the source cell)
+//     Q2: x <  lx, y >= ly
+//     Q3: x <  lx, y <  ly
+//     Q4: x >= lx, y <  ly
+//   so no quadrant writes the same cell.
+//
+// Build:
+// - Ensure CMake links OpenMP (you already do via OpenMP::OpenMP_CXX).
+
+// This version fixes the correctness issue in the previous "parallel sections"
+// attempt: Q3/Q4 (and Q2/Q3 near the axes) depend on values on the source
+// row/column. If those axis values are computed by a *different* OpenMP section
+// concurrently, you get races and wrong results.
+//
+// Fix: compute the full source row (y=ly) and source column (x=lx) serially
+// first, then run 4 OpenMP sections on the *interiors* of each quadrant
+// (disjoint regions).
+//
+// Math matches the original implementation (same neighbor choices and same c
+// ratios). The only extra is an optional diagonal (i==j) branch; keep it if you
+// want the intended behavior, or remove it to mimic the original
+// "no-diagonal-case" behavior.
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::computeVisibility_parallelSections() {
+  auto *vis = visibility_.data();
+  const auto *occ = occupancyComplement_->data();
+  const size_t nx = nx_;
+  const size_t ny = ny_;
+  const size_t lx = ls_.first;
+  const size_t ly = ls_.second;
+
+  // --- 0) Source ---
+  const size_t src = lx + ly * nx;
+  vis[src] = lightStrength_ * occ[src];
+
+  // --- 1) Precompute axes (serial) ---
+  // Source row y=ly (right side)
+  if (ly < ny) {
+    const size_t row = ly * nx;
+    for (size_t x = lx + 1; x < nx; ++x) {
+      const size_t idx = row + x;
+      const double v = vis[idx - 1]; // (x-1, ly)
+      vis[idx] = v * occ[idx];
+    }
+    // Source row y=ly (left side)
+    if (lx > 0) {
+      for (size_t x = lx; x-- > 0;) {
+        const size_t idx = row + x;
+        const double v = vis[idx + 1]; // (x+1, ly)
+        vis[idx] = v * occ[idx];
+      }
+    }
+  }
+
+  // Source column x=lx (downwards, y increasing)
+  if (lx < nx) {
+    for (size_t y = ly + 1; y < ny; ++y) {
+      const size_t idx = lx + y * nx;
+      const double v = vis[idx - nx]; // (lx, y-1)
+      vis[idx] = v * occ[idx];
+    }
+    // Source column x=lx (upwards, y decreasing)
+    if (ly > 0) {
+      for (size_t y = ly; y-- > 0;) {
+        const size_t idx = lx + y * nx;
+        const double v = vis[idx + nx]; // (lx, y+1)
+        vis[idx] = v * occ[idx];
+      }
+    }
+  }
+
+  // --- 2) Quadrant interiors in parallel (disjoint writes) ---
+  // Q1 interior: x in [lx+1..nx-1], y in [ly+1..ny-1]
+  // Q2 interior: x in [0..lx-1],    y in [ly+1..ny-1]
+  // Q3 interior: x in [0..lx-1],    y in [0..ly-1]
+  // Q4 interior: x in [lx+1..nx-1], y in [0..ly-1]
+  //
+  // Only 4 sections => usually best to cap threads at 4 for lower overhead.
+#pragma omp parallel sections num_threads(4)
+  {
+#pragma omp section
+    {
+      computeQ1_rowwise(vis, occ, nx, ny, lx, ly);
+    }
+#pragma omp section
+    {
+      computeQ2_rowwise(vis, occ, nx, ny, lx, ly);
+    }
+#pragma omp section
+    {
+      computeQ3_rowwise(vis, occ, nx, ny, lx, ly);
+    }
+#pragma omp section
+    {
+      computeQ4_rowwise(vis, occ, nx, ny, lx, ly);
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+// -------------------------
+// Q1 interior (x+, y+)
+// x = lx + i, y = ly + j, with i>=1, j>=1
+// Original (Q1):
+//   if i>j: c=j/i; v=U(x-1,y) - c*(U(x-1,y)-U(x-1,y-1))
+//   if j>i: c=i/j; v=U(x,y-1) - c*(U(x,y-1)-U(x-1,y-1))
+// -------------------------
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::computeQ1_rowwise(double *vis,
+                                                   const double *occ, size_t nx,
+                                                   size_t ny, size_t lx,
+                                                   size_t ly) const {
+
+  if (lx + 1 >= nx || ly + 1 >= ny)
+    return;
+
+  for (size_t y = ly + 1; y < ny; ++y) {
+    const size_t j = y - ly;
+    const size_t row = y * nx;
+    const size_t row_m1 = (y - 1) * nx;
+
+    for (size_t x = lx + 1; x < nx; ++x) {
+      const size_t i = x - lx;
+      const size_t idx = row + x;
+
+      double v;
+
+      // Optional diagonal fix (remove to mimic original behavior exactly)
+      if (i == j) {
+        v = vis[row_m1 + (x - 1)]; // (x-1, y-1)
+      } else if (i > j) {
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x - 1)];    // (x-1, y)
+        const double uD = vis[row_m1 + (x - 1)]; // (x-1, y-1)
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        const double c = double(i) / double(j);
+        const double uP = vis[row_m1 + x];       // (x, y-1)
+        const double uD = vis[row_m1 + (x - 1)]; // (x-1, y-1)
+        v = uP - c * (uP - uD);
+      }
+
+      vis[idx] = v * occ[idx];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+// -------------------------
+// Q2 interior (x-, y+)
+// x = lx - i, y = ly + j, with i>=1, j>=1
+// Original (Q2):
+//   if i>j: c=j/i; v=U(x+1,y) - c*(U(x+1,y)-U(x+1,y-1))
+//   if j>i: c=i/j; v=U(x,y-1) - c*(U(x,y-1)-U(x+1,y-1))
+// -------------------------
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::computeQ2_rowwise(double *vis,
+                                                   const double *occ, size_t nx,
+                                                   size_t ny, size_t lx,
+                                                   size_t ly) const {
+
+  if (lx == 0 || ly + 1 >= ny)
+    return;
+
+  for (size_t y = ly + 1; y < ny; ++y) {
+    const size_t j = y - ly;
+    const size_t row = y * nx;
+    const size_t row_m1 = (y - 1) * nx;
+
+    // x: lx-1 .. 0 (decreasing so (x+1,y) is already computed in this row)
+    for (size_t x = lx; x-- > 0;) {
+      const size_t i = lx - x;
+      const size_t idx = row + x;
+
+      double v;
+
+      // Optional diagonal fix (remove to mimic original behavior exactly)
+      if (i == j) {
+        v = vis[row_m1 + (x + 1)]; // (x+1, y-1)
+      } else if (i > j) {
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x + 1)];    // (x+1, y)
+        const double uD = vis[row_m1 + (x + 1)]; // (x+1, y-1)
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        const double c = double(i) / double(j);
+        const double uP = vis[row_m1 + x];       // (x, y-1)
+        const double uD = vis[row_m1 + (x + 1)]; // (x+1, y-1)
+        v = uP - c * (uP - uD);
+      }
+
+      vis[idx] = v * occ[idx];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+// -------------------------
+// Q3 interior (x-, y-)
+// x = lx - i, y = ly - j, with i>=1, j>=1
+// Original (Q3):
+//   if i>j: c=j/i; v=U(x+1,y) - c*(U(x+1,y)-U(x+1,y+1))
+//   if j>i: c=i/j; v=U(x,y+1) - c*(U(x,y+1)-U(x+1,y+1))
+// -------------------------
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::computeQ3_rowwise(double *vis,
+                                                   const double *occ, size_t nx,
+                                                   size_t ny, size_t lx,
+                                                   size_t ly) const {
+
+  if (lx == 0 || ly == 0)
+    return;
+
+  // y: ly-1 .. 0 (decreasing so (x, y+1) is already computed)
+  for (size_t y = ly; y-- > 0;) {
+    const size_t j = ly - y;
+    const size_t row = y * nx;
+    const size_t row_p1 = (y + 1) * nx;
+
+    // x: lx-1 .. 0 (decreasing so (x+1, y) is already computed)
+    for (size_t x = lx; x-- > 0;) {
+      const size_t i = lx - x;
+      const size_t idx = row + x;
+
+      double v;
+
+      // Optional diagonal fix (remove to mimic original behavior exactly)
+      if (i == j) {
+        v = vis[row_p1 + (x + 1)]; // (x+1, y+1)
+      } else if (i > j) {
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x + 1)];    // (x+1, y)
+        const double uD = vis[row_p1 + (x + 1)]; // (x+1, y+1)
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        const double c = double(i) / double(j);
+        const double uP = vis[row_p1 + x];       // (x, y+1)
+        const double uD = vis[row_p1 + (x + 1)]; // (x+1, y+1)
+        v = uP - c * (uP - uD);
+      }
+
+      vis[idx] = v * occ[idx];
+    }
+  }
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+// -------------------------
+// Q4 interior (x+, y-)
+// x = lx + i, y = ly - j, with i>=1, j>=1
+// Original (Q4):
+//   if i>j: c=j/i; v=U(x-1,y) - c*(U(x-1,y)-U(x-1,y+1))
+//   if j>i: c=i/j; v=U(x,y+1) - c*(U(x,y+1)-U(x-1,y+1))
+// -------------------------
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+void vbs::visibilityBasedSolver::computeQ4_rowwise(double *vis,
+                                                   const double *occ, size_t nx,
+                                                   size_t ny, size_t lx,
+                                                   size_t ly) const {
+
+  if (lx + 1 >= nx || ly == 0)
+    return;
+
+  // y: ly-1 .. 0 (decreasing so (x, y+1) is already computed)
+  for (size_t y = ly; y-- > 0;) {
+    const size_t j = ly - y;
+    const size_t row = y * nx;
+    const size_t row_p1 = (y + 1) * nx;
+
+    for (size_t x = lx + 1; x < nx; ++x) {
+      const size_t i = x - lx;
+      const size_t idx = row + x;
+
+      double v;
+
+      // Optional diagonal fix (remove to mimic original behavior exactly)
+      if (i == j) {
+        v = vis[row_p1 + (x - 1)]; // (x-1, y+1)
+      } else if (i > j) {
+        const double c = double(j) / double(i);
+        const double uP = vis[row + (x - 1)];    // (x-1, y)
+        const double uD = vis[row_p1 + (x - 1)]; // (x-1, y+1)
+        v = uP - c * (uP - uD);
+      } else { // j > i
+        const double c = double(i) / double(j);
+        const double uP = vis[row_p1 + x];       // (x, y+1)
+        const double uD = vis[row_p1 + (x - 1)]; // (x-1, y+1)
+        v = uP - c * (uP - uD);
+      }
+
+      vis[idx] = v * occ[idx];
+    }
   }
 }
 

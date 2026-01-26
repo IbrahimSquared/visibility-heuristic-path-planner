@@ -7,7 +7,7 @@ project(visibility_heuristic_planner)
 # set(CMAKE_CXX_COMPILER /usr/bin/g++)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -Ofast -march=native -flto -Wall -Wpedantic -Wextra -Wnull-dereference")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -flto -Wall -Wpedantic -Wextra -Wnull-dereference")
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
@@ -18,5 +18,6 @@ add_executable(visibility_heuristic_planner src/main.cpp src/environment.cpp src
 
 # Find the SFML package
 find_package(SFML 2.5 COMPONENTS graphics REQUIRED)
+find_package(OpenMP REQUIRED)
 # Link the SFML graphics library
-target_link_libraries(visibility_heuristic_planner PRIVATE sfml-graphics)
+target_link_libraries(visibility_heuristic_planner PRIVATE sfml-graphics OpenMP::OpenMP_CXX)
