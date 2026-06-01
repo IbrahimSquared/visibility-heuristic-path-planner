@@ -132,14 +132,14 @@ private:
    */
   void computeVisibilityUsingQueue();
 
-  void computeQ1_rowwise(double* vis, const double* occ,
-                         size_t nx, size_t ny, size_t lx, size_t ly) const;
-  void computeQ2_rowwise(double* vis, const double* occ,
-                         size_t nx, size_t ny, size_t lx, size_t ly) const;
-  void computeQ3_rowwise(double* vis, const double* occ,
-                         size_t nx, size_t ny, size_t lx, size_t ly) const;
-  void computeQ4_rowwise(double* vis, const double* occ,
-                         size_t nx, size_t ny, size_t lx, size_t ly) const;
+  void computeQ1_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ2_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ3_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ4_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
 
   // Save results
   void saveResults() const;
