@@ -483,6 +483,8 @@ void visibilityBasedSolver::updateVisibility() {
         v = visibility_(currentX, currentY - 1);
       } else if (j == 0) {
         v = visibility_(currentX - 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX - 1, currentY - 1);
       } else if (i > j) {
         c_ = (double)(currentY - ls_.second + offset) /
              (currentX - ls_.first + offset);
@@ -527,6 +529,8 @@ void visibilityBasedSolver::updateVisibility() {
         v = visibility_(currentX, currentY - 1);
       } else if (j == 0) {
         v = visibility_(currentX + 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX + 1, currentY - 1);
       } else if (i > j) {
         c_ = (double)(currentY - ls_.second + offset) /
              (ls_.first - currentX + offset);
@@ -571,6 +575,8 @@ void visibilityBasedSolver::updateVisibility() {
         v = visibility_(currentX, currentY + 1);
       } else if (j == 0) {
         v = visibility_(currentX + 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX + 1, currentY + 1);
       } else if (i > j) {
         c_ = (double)(ls_.second - currentY + offset) /
              (ls_.first - currentX + offset);
@@ -615,6 +621,8 @@ void visibilityBasedSolver::updateVisibility() {
         v = visibility_(currentX, currentY + 1);
       } else if (j == 0) {
         v = visibility_(currentX - 1, currentY);
+      } else if (i == j) {
+        v = visibility_(currentX - 1, currentY + 1);
       } else if (i > j) {
         c_ = (double)(ls_.second - currentY + offset) /
              (currentX - ls_.first + offset);
