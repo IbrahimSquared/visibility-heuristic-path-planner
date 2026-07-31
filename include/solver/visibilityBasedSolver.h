@@ -17,7 +17,15 @@ struct Node {
   size_t x, y;
   double h;
 
-  bool operator<(const Node &other) const { return h > other.h; }
+  bool operator<(const Node &other) const {
+    if (h != other.h) {
+      return h > other.h;
+    }
+    if (x != other.x) {
+      return x > other.x;
+    }
+    return y > other.y;
+  }
 };
 
 class visibilityBasedSolver {
@@ -36,6 +44,12 @@ public:
 
   // Solve
   void solve();
+
+  // Last reconstructed path. Empty when solve() has not produced a path.
+  inline const std::vector<point> &getLastPath() const { return lastPath_; }
+
+  // Verify that all visibility kernels produce bitwise-identical fields.
+  bool validateVisibilityKernels();
 
   // Compute standAloneVisibility
   void standAloneVisibility();
@@ -119,10 +133,13 @@ private:
 
   // visibility update
   void updateVisibility();
+  bool updateVisibilityAndPickBest(Node &bestOut);
 
   // Stand-alone visibility computation (Algorithm 1 in the paper). More
   // suitable for sparse environments.
-  void computeVisibility();
+  void computeVisibility_original();
+  void computeVisibility_rowOptimizedSerial();
+  void computeVisibility_parallelSections();
 
   /*!
    * @brief Stand-alone visibility computation using a queue. It has termination
@@ -130,12 +147,23 @@ private:
    */
   void computeVisibilityUsingQueue();
 
+  void computeQ1_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ2_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ3_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+  void computeQ4_rowwise(double *vis, const double *occ, size_t nx, size_t ny,
+                         size_t lx, size_t ly) const;
+
   // Save results
   void saveResults() const;
   void saveImageWithPath(const std::vector<point> &path) const;
 
   // Heap to maintain the heuristic
   std::unique_ptr<std::priority_queue<Node>> heap_;
+
+  std::vector<point> lastPath_;
 
   // Number of lightsources/pivots.
   size_t nb_of_sources_ = 0;
