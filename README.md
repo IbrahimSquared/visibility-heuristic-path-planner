@@ -1,15 +1,3 @@
-### Visibility kernel benchmarking (C++ / OpenMP)
-
-This repo includes three visibility-kernel implementations:
-
-* **Original** nested-loop sweep (baseline)
-* **Row-optimized (serial)** sweep using contiguous x-inner traversal and raw buffer access
-* **Parallel (OpenMP sections)** quadrant sweep (dependency-safe; computes axes serially then runs 4 disjoint quadrant interiors in parallel)
-
-`benchmark()` reports per-kernel compute time and verifies **bitwise exactness** (`memcmp`) against the baseline after timing.
-
-Build requirements: OpenMP (linked via `OpenMP::OpenMP_CXX`).
-
 # Visibility & Visibility Heuristic Path Planning
 
 This repository contains an implementation of the algorithms provided in the paper: An Efficient Solution to the 2D Visibility Problem in Cartesian Grid Maps and its Application in Heuristic Path Planning ([ICRA2024](https://ieeexplore.ieee.org/document/10611529), [arxiv paper](https://arxiv.org/abs/2403.06494)). <br>
@@ -18,11 +6,35 @@ Provides a linear complexity & highly efficient 2D visibility solution, based on
 
 The algorithm functions in a dynamic-programming approach.
 
+## Optimized C++ implementation
+
+The C++ implementation provides three visibility kernels:
+
+* **Original:** the reference nested-loop sweep.
+* **Row-optimized:** a serial, cache-friendly sweep over contiguous storage.
+* **Parallel:** a dependency-safe OpenMP sweep that computes the source axes first and then processes the four quadrant interiors independently.
+
+The visibility-heuristic planner uses the parallel kernel when OpenMP is available and falls back to the same quadrant implementation serially otherwise. Its candidate selection performs one linear scan of the grid and retains only the best candidate instead of inserting every eligible cell into a priority queue. This changes candidate-selection work per pivot from approximately $O(N\log N)$ to $O(N)$ while preserving the planner heuristic.
+
+`benchmark` compares all three visibility kernels and checks their fields for bitwise equality after timing. On [`benchmarks/planner_1000.config`](benchmarks/planner_1000.config), a GCC 13.3 Release build on an Intel i9-13980HX reduced the measured planner loop from approximately 88 ms to 20 ms while producing the same saved light-source path and rendered result. This is an illustrative measurement rather than a hardware-independent speed guarantee.
+
+Normal execution runs only the path planner. Benchmarking is opt-in:
+
+```sh
+./visibility_heuristic_planner
+./visibility_heuristic_planner solve config/settings.config
+./visibility_heuristic_planner visibility config/settings.config
+./visibility_heuristic_planner benchmark config/settings.config
+./visibility_heuristic_planner benchmark-series config/settings.config
+```
+
+The CTest regression constructs a deterministic two-wall map and verifies kernel parity, stable candidate tie-breaking, repeated-solve determinism, correct path endpoints, and collision-free reconstructed segments.
+
 For example, a 101x101 grid can be processed at ~55kHz in C++ on an i9-13980HX processor. <br>
 Code developed for C++20.
 
-C++ code by default now computes standalone visibility for random environments and plots them using SFML using two methods: proposed and raycasting.
-Benchmarks show that proposed method runs ~80 times faster than raycasting for an empty $1000\times{}1000$ gridmap. This speedup decreases for denser environments since raycasting terminates upon collisions. Using computeVisibilityUsingQueue() (has stopping criterion) can maintain speedups for denser environments. In all cases, proposed method remains faster.
+The C++ executable runs the visibility-heuristic path planner by default. The explicit `visibility` and `benchmark` modes compute standalone visibility or compare the proposed method with raycasting.
+Historical benchmarks show that the proposed visibility method runs ~80 times faster than raycasting for an empty $1000\times{}1000$ gridmap. This speedup decreases for denser environments since raycasting terminates upon collisions. Using `computeVisibilityUsingQueue()` (which has a stopping criterion) can maintain speedups for denser environments.
 
 ## Visibility
 
@@ -105,16 +117,16 @@ This is relevant for selecting start/end points. This standard can ofcourse be c
 
 ## To build or compile using cmake in Linux
 
-Required: <br>
-cmake and g++: <br>
-`sudo apt install cmake` <br>
-`sudo apt install g++` <br>
-libsfml-dev: <br>
-`sudo apt-get install libsfml-dev` <br>
-Set compiler path (or comment that part), make sure SFML libraries are installed, then: <br>
-`mkdir build && cd build` <br>
-`cmake ..` <br>
-`make`
+Install CMake, a C++20 compiler, and SFML. GCC provides OpenMP automatically on common Linux distributions:
+
+```sh
+sudo apt install cmake g++ libsfml-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+CMake uses OpenMP when it is available. To verify the portable serial fallback explicitly, configure with `-DVHPP_ENABLE_OPENMP=OFF`.
 
 ## Instructions to build the C++ code on Windows in Visual Studio Code
 

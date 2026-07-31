@@ -17,7 +17,15 @@ struct Node {
   size_t x, y;
   double h;
 
-  bool operator<(const Node &other) const { return h > other.h; }
+  bool operator<(const Node &other) const {
+    if (h != other.h) {
+      return h > other.h;
+    }
+    if (x != other.x) {
+      return x > other.x;
+    }
+    return y > other.y;
+  }
 };
 
 class visibilityBasedSolver {
@@ -36,6 +44,12 @@ public:
 
   // Solve
   void solve();
+
+  // Last reconstructed path. Empty when solve() has not produced a path.
+  inline const std::vector<point> &getLastPath() const { return lastPath_; }
+
+  // Verify that all visibility kernels produce bitwise-identical fields.
+  bool validateVisibilityKernels();
 
   // Compute standAloneVisibility
   void standAloneVisibility();
@@ -121,13 +135,6 @@ private:
   void updateVisibility();
   bool updateVisibilityAndPickBest(Node &bestOut);
 
-  std::vector<float> distToEnd_;  // float is fine for a heuristic
-  size_t distToEnd_nx_ = 0, distToEnd_ny_ = 0;
-  point  distToEnd_end_{-1, -1};
-
-  void buildDistToEndCache();
-
-
   // Stand-alone visibility computation (Algorithm 1 in the paper). More
   // suitable for sparse environments.
   void computeVisibility_original();
@@ -155,6 +162,8 @@ private:
 
   // Heap to maintain the heuristic
   std::unique_ptr<std::priority_queue<Node>> heap_;
+
+  std::vector<point> lastPath_;
 
   // Number of lightsources/pivots.
   size_t nb_of_sources_ = 0;

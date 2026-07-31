@@ -55,14 +55,7 @@ void visibilityBasedSolver::reset() {
 
   lightSources_.reset(new point[nx_ * ny_]);
   scale_ = sqrt(ny_ * ny_ + nx_ * nx_);
-  heap_.reset();
-
-  // Reserve heap_
-  std::vector<Node> container;
-  container.reserve(nx_ * ny_);
-  std::priority_queue<Node, std::vector<Node>, std::less<Node>> heap(
-      std::less<Node>(), std::move(container));
-  heap_ = std::make_unique<std::priority_queue<Node>>(heap);
+  heap_ = std::make_unique<std::priority_queue<Node>>();
 
   nb_of_sources_ = 0;
 }
@@ -71,11 +64,7 @@ void visibilityBasedSolver::reset() {
 /*****************************************************************************/
 /*****************************************************************************/
 void visibilityBasedSolver::resetQueue() {
-  std::vector<Node> container;
-  container.reserve(ny_ * nx_);
-  std::priority_queue<Node, std::vector<Node>, std::less<Node>> heap(
-      std::less<Node>(), std::move(container));
-  heap_ = std::make_unique<std::priority_queue<Node>>(heap);
+  heap_ = std::make_unique<std::priority_queue<Node>>();
 }
 
 /*****************************************************************************/
@@ -83,6 +72,7 @@ void visibilityBasedSolver::resetQueue() {
 /*****************************************************************************/
 void vbs::visibilityBasedSolver::solve() {
   auto time_start = std::chrono::high_resolution_clock::now();
+  lastPath_.clear();
 
   // Init
   auto start = sharedConfig_->start;
@@ -134,7 +124,6 @@ void vbs::visibilityBasedSolver::solve() {
 
   ls_ = start;
   end_ = end;
-  buildDistToEndCache();
 
   lightSources_[0] = start;
   cameFrom_(start.first, start.second) = 0;
@@ -183,11 +172,9 @@ void vbs::visibilityBasedSolver::solve() {
   }
 
   saveResults();
-
-  std::vector<point> path;
   reconstructPath(Node{static_cast<size_t>(end_.first),
                        static_cast<size_t>(end_.second), 0},
-                  path);
+                  lastPath_);
 }
 
 /*****************************************************************************/
@@ -196,6 +183,9 @@ void vbs::visibilityBasedSolver::solve() {
 void visibilityBasedSolver::standAloneVisibility() {
   // Init
   auto start = sharedConfig_->start;
+  if (sharedConfig_->mode == 2) {
+    start.second = ny_ - 1 - start.second;
+  }
 
   // check if start and end are valid
   if (!isValid(start.first, start.second)) {
@@ -215,7 +205,7 @@ void visibilityBasedSolver::standAloneVisibility() {
 
   ls_ = start;
   visibilityThreshold_ = sharedConfig_->visibilityThreshold;
-  updateVisibility();
+  computeVisibility_parallelSections();
   saveStandAloneVisibility();
 }
 
@@ -225,6 +215,9 @@ void visibilityBasedSolver::standAloneVisibility() {
 void visibilityBasedSolver::benchmark() {
   // Init
   auto start = sharedConfig_->start;
+  if (sharedConfig_->mode == 2) {
+    start.second = ny_ - 1 - start.second;
+  }
 
   // check if start and end are valid
   if (!isValid(start.first, start.second)) {
@@ -367,6 +360,49 @@ void visibilityBasedSolver::benchmark() {
   }
   std::cout << "Density of the occupancy grid: "
             << (double)count / (nx_ * ny_) * 100 << "%\n";
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+bool visibilityBasedSolver::validateVisibilityKernels() {
+  auto start = sharedConfig_->start;
+  if (sharedConfig_->mode == 2) {
+    start.second = ny_ - 1 - start.second;
+  }
+
+  if (!isValid(start.first, start.second) ||
+      occupancyComplement_->get(start.first, start.second) == 0) {
+    return false;
+  }
+
+  ls_ = start;
+  auto *vis = visibility_.data();
+  const size_t n = visibility_.size();
+  const size_t bytes = n * sizeof(double);
+
+  auto capture = [&](auto &&fn) {
+    std::fill(vis, vis + n, 0.0);
+    fn();
+    std::vector<double> result(n);
+    std::memcpy(result.data(), vis, bytes);
+    return result;
+  };
+
+  const auto original =
+      capture([&]() { computeVisibility_original(); });
+  const auto rowOptimized =
+      capture([&]() { computeVisibility_rowOptimizedSerial(); });
+  const auto parallel =
+      capture([&]() { computeVisibility_parallelSections(); });
+
+  const bool rowMatches =
+      std::memcmp(rowOptimized.data(), original.data(), bytes) == 0;
+  const bool parallelMatches =
+      std::memcmp(parallel.data(), original.data(), bytes) == 0;
+
+  std::memcpy(vis, parallel.data(), bytes);
+  return rowMatches && parallelMatches;
 }
 
 /*****************************************************************************/
@@ -683,34 +719,6 @@ void visibilityBasedSolver::updateVisibility() {
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-void vbs::visibilityBasedSolver::buildDistToEndCache() {
-  if (distToEnd_nx_ == nx_ && distToEnd_ny_ == ny_ &&
-      distToEnd_end_.first == end_.first &&
-      distToEnd_end_.second == end_.second && distToEnd_.size() == nx_ * ny_) {
-    return; // already valid
-  }
-
-  distToEnd_.assign(nx_ * ny_, 0.0f);
-  const float ex = static_cast<float>(end_.first);
-  const float ey = static_cast<float>(end_.second);
-
-  for (size_t y = 0; y < ny_; ++y) {
-    const float fy = static_cast<float>(y) - ey;
-    const size_t row = y * nx_;
-    for (size_t x = 0; x < nx_; ++x) {
-      const float fx = static_cast<float>(x) - ex;
-      distToEnd_[row + x] = std::sqrt(fx * fx + fy * fy);
-    }
-  }
-
-  distToEnd_nx_ = nx_;
-  distToEnd_ny_ = ny_;
-  distToEnd_end_ = end_;
-}
-
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
 bool vbs::visibilityBasedSolver::updateVisibilityAndPickBest(Node &bestOut) {
   // 1) Compute local visibility from current ls_ using your fastest exact
   // kernel.
@@ -738,13 +746,17 @@ bool vbs::visibilityBasedSolver::updateVisibilityAndPickBest(Node &bestOut) {
   // - update global visibility
   // - set cameFrom once when local vis crosses threshold
   // - select best candidate according to same ordering as your heap top
+#ifdef _OPENMP
 #pragma omp parallel
+#endif
   {
     std::less<Node> lcmp;
     bool lhaveBest = false;
     Node lbest{0, 0, 0.0};
 
+#ifdef _OPENMP
 #pragma omp for nowait
+#endif
     for (long long idx_ll = 0; idx_ll < static_cast<long long>(N); ++idx_ll) {
       const size_t idx = static_cast<size_t>(idx_ll);
 
@@ -785,7 +797,9 @@ bool vbs::visibilityBasedSolver::updateVisibilityAndPickBest(Node &bestOut) {
       }
     }
 
+#ifdef _OPENMP
 #pragma omp critical
+#endif
     {
       if (lhaveBest && (!haveBest || cmp(best, lbest))) {
         best = lbest;
@@ -1231,6 +1245,7 @@ void vbs::visibilityBasedSolver::computeVisibility_parallelSections() {
   // Q4 interior: x in [lx+1..nx-1], y in [0..ly-1]
   //
   // Only 4 sections => usually best to cap threads at 4 for lower overhead.
+#ifdef _OPENMP
 #pragma omp parallel sections num_threads(4)
   {
 #pragma omp section
@@ -1250,6 +1265,12 @@ void vbs::visibilityBasedSolver::computeVisibility_parallelSections() {
       computeQ4_rowwise(vis, occ, nx, ny, lx, ly);
     }
   }
+#else
+  computeQ1_rowwise(vis, occ, nx, ny, lx, ly);
+  computeQ2_rowwise(vis, occ, nx, ny, lx, ly);
+  computeQ3_rowwise(vis, occ, nx, ny, lx, ly);
+  computeQ4_rowwise(vis, occ, nx, ny, lx, ly);
+#endif
 }
 
 /*****************************************************************************/
@@ -1372,7 +1393,7 @@ void vbs::visibilityBasedSolver::computeQ2_rowwise(double *vis,
 /*****************************************************************************/
 void vbs::visibilityBasedSolver::computeQ3_rowwise(double *vis,
                                                    const double *occ, size_t nx,
-                                                   size_t ny, size_t lx,
+                                                   size_t /*ny*/, size_t lx,
                                                    size_t ly) const {
 
   if (lx == 0 || ly == 0)
@@ -1426,7 +1447,7 @@ void vbs::visibilityBasedSolver::computeQ3_rowwise(double *vis,
 /*****************************************************************************/
 void vbs::visibilityBasedSolver::computeQ4_rowwise(double *vis,
                                                    const double *occ, size_t nx,
-                                                   size_t ny, size_t lx,
+                                                   size_t /*ny*/, size_t lx,
                                                    size_t ly) const {
 
   if (lx + 1 >= nx || ly == 0)
